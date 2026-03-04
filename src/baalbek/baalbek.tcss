@@ -44,6 +44,7 @@ HistoryList {
     width: 1fr;
     border: solid $warning;
     min-width: 20;
+    margin-left: 1;
 }
 
 OutputViewer {
@@ -58,4 +59,8 @@ OutputViewer {
 
 .field-highlight {
     border: tall $accent;
+}
+
+#zoom-content {
+    padding: 1 2;
 }

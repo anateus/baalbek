@@ -58,8 +58,12 @@ class CommanderScreen(Screen):
             event.prevent_default()
         elif key in ("l", "right", "enter"):
             mc = self.query_one(MillerColumns)
-            mc.move_focus_right()
-            self._update_breadcrumbs()
+            from baalbek.widgets.output_viewer import OutputViewer
+            if isinstance(mc.focused_column, OutputViewer):
+                self._zoom_output(mc.focused_column._raw_output)
+            else:
+                mc.move_focus_right()
+                self._update_breadcrumbs()
             event.prevent_default()
         elif key == "i":
             self._mode_mgr.enter_edit()
@@ -125,6 +129,7 @@ class CommanderScreen(Screen):
 
         with self.app.suspend():
             _execute()
+            input("\nPress Enter to continue...")
 
         mc = self.query_one(MillerColumns)
         db = HistoryDB(self.app._db_path)
@@ -148,9 +153,28 @@ class CommanderScreen(Screen):
             db.close()
         mc.show_history(records)
 
+    def on_miller_columns_command_selected(self, event: MillerColumns.CommandSelected) -> None:
+        from baalbek.db import HistoryDB
+
+        command_path = " ".join(self.query_one(MillerColumns).get_command_args())
+        if not command_path:
+            return
+        db = HistoryDB(self.app._db_path)
+        try:
+            all_records = db.list_runs()
+        finally:
+            db.close()
+        matching = [r for r in all_records if command_path in r.command]
+        if matching:
+            self.query_one(MillerColumns).show_history(matching)
+
     def on_history_list_selected(self, event) -> None:
         mc = self.query_one(MillerColumns)
         mc.show_output(event.record.raw_output)
+
+    def _zoom_output(self, raw_output: bytes) -> None:
+        from baalbek.screens.output_zoom import OutputZoomScreen
+        self.app.push_screen(OutputZoomScreen(raw_output))
 
     def build_command_args(self) -> list[str]:
         import sys

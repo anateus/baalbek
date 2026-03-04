@@ -259,7 +259,7 @@ class MillerColumns(Widget):
         from baalbek.widgets.history_list import HistoryList
 
         self._remove_history_columns()
-        history = HistoryList(records, id="history-column")
+        history = HistoryList(records)
         self._committed.append(history)
         viewport = self.query_one("#miller-viewport")
         viewport.mount(history)
@@ -271,9 +271,10 @@ class MillerColumns(Widget):
         for col in list(self._committed):
             if isinstance(col, OutputViewer):
                 self._committed.remove(col)
+                col.display = False
                 col.remove()
                 break
-        viewer = OutputViewer(raw_output, id="output-column")
+        viewer = OutputViewer(raw_output)
         self._committed.append(viewer)
         viewport = self.query_one("#miller-viewport")
         viewport.mount(viewer)
@@ -286,6 +287,7 @@ class MillerColumns(Widget):
         to_remove = [c for c in self._committed if isinstance(c, (HistoryList, OutputViewer))]
         for col in to_remove:
             self._committed.remove(col)
+            col.display = False
             col.remove()
 
     def _update_viewport(self) -> None:
