@@ -34,7 +34,7 @@ async def test_app_launches_and_shows_commands():
     async with app.run_test() as pilot:
         await pilot.pause()
         mc = pilot.app.screen.query_one(MillerColumns)
-        assert mc.column_count == 1
+        assert mc.column_count >= 2
         bc = pilot.app.screen.query_one(Breadcrumbs)
         assert bc is not None
 

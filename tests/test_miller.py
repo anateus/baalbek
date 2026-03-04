@@ -80,7 +80,7 @@ async def test_initial_column():
     async with MillerApp(make_commands()).run_test() as pilot:
         mc = pilot.app.query_one(MillerColumns)
         await pilot.pause()
-        assert mc.column_count == 1
+        assert mc.column_count >= 2
 
 
 @pytest.mark.asyncio

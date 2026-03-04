@@ -35,6 +35,10 @@ class MillerColumns(Widget):
         self._schemas_at_depth.append(self._root_commands)
         viewport = self.query_one("#miller-viewport")
         viewport.mount(col)
+        if col.selected_schema:
+            self._show_preview(col.selected_schema)
+        self._focus_index = 0
+        self._update_focus_styles()
 
     @property
     def column_count(self) -> int:
@@ -50,6 +54,7 @@ class MillerColumns(Widget):
         if not isinstance(schemas, dict) or name not in schemas:
             return
         schema = schemas[name]
+        self._clear_preview()
         self._path.append(name)
         self._trim_columns_to(depth + 1)
         viewport = self.query_one("#miller-viewport")
@@ -77,6 +82,35 @@ class MillerColumns(Widget):
 
         self._update_viewport()
         self._update_focus_styles()
+
+    def _show_preview(self, schema: CommandSchema) -> None:
+        self._clear_preview()
+        viewport = self.query_one("#miller-viewport")
+        if schema.is_group:
+            if schema.has_own_params:
+                form = OptionForm(schema)
+                form.add_class("preview")
+                self._columns.append(form)
+                viewport.mount(form)
+            child_list = CommandList(schema.subcommands)
+            child_list.add_class("preview")
+            self._columns.append(child_list)
+            viewport.mount(child_list)
+        else:
+            form = OptionForm(schema)
+            form.add_class("preview")
+            self._columns.append(form)
+            viewport.mount(form)
+        self._update_viewport()
+
+    def _clear_preview(self) -> None:
+        to_remove = [c for c in self._columns if c.has_class("preview")]
+        for col in to_remove:
+            self._columns.remove(col)
+            col.remove()
+
+    def on_command_list_selected(self, event: CommandList.Selected) -> None:
+        self._show_preview(event.schema)
 
     @property
     def focused_column(self) -> Widget | None:
@@ -132,6 +166,7 @@ class MillerColumns(Widget):
     def go_back(self) -> None:
         if not self._path:
             return
+        self._clear_preview()
         self._path.pop()
         depth = len(self._path)
         self._trim_columns_to(depth + 1)

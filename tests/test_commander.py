@@ -56,4 +56,4 @@ async def test_has_miller_columns():
     async with CommanderApp().run_test() as pilot:
         await pilot.pause()
         mc = pilot.app.screen.query_one(MillerColumns)
-        assert mc.column_count == 1
+        assert mc.column_count >= 2
