@@ -6,6 +6,14 @@ MillerColumns {
     height: 1fr;
 }
 
+#app-title {
+    height: 1;
+    background: $primary;
+    color: $text;
+    text-style: bold;
+    padding: 0 1;
+}
+
 #breadcrumbs {
     height: 1;
     background: $surface;
@@ -46,4 +54,8 @@ OutputViewer {
 
 .focused {
     border: solid $accent;
+}
+
+.field-highlight {
+    border: tall $accent;
 }

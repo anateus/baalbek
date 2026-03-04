@@ -12,16 +12,33 @@ from baalbek.screens.commander import CommanderScreen
 _DEFAULT_DB_PATH = Path.home() / ".local" / "share" / "baalbek" / "history.db"
 
 
+def _detect_app_name(cli: click.BaseCommand) -> str:
+    if cli.name:
+        return cli.name
+    try:
+        import tomllib
+        for candidate in [Path("pyproject.toml"), Path.cwd() / "pyproject.toml"]:
+            if candidate.exists():
+                data = tomllib.loads(candidate.read_text())
+                name = data.get("project", {}).get("name")
+                if name:
+                    return name
+    except Exception:
+        pass
+    return "CLI"
+
+
 class Baalbek(App):
     CSS_PATH = "baalbek.tcss"
 
     def __init__(self, cli: click.BaseCommand, db_path: Path | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
         self._cli = cli
+        self._app_name = _detect_app_name(cli)
         self._db_path = db_path or _DEFAULT_DB_PATH
 
     def on_mount(self) -> None:
-        self.push_screen(CommanderScreen(self._cli))
+        self.push_screen(CommanderScreen(self._cli, app_name=self._app_name))
 
 
 def tui(

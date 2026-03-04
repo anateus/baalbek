@@ -10,9 +10,10 @@ from baalbek.schemas import CommandSchema
 
 class CommandList(OptionList):
     class Selected(Message):
-        def __init__(self, schema: CommandSchema) -> None:
+        def __init__(self, schema: CommandSchema, command_list: CommandList) -> None:
             super().__init__()
             self.schema = schema
+            self.command_list = command_list
 
     def __init__(self, commands: dict[str, CommandSchema], **kwargs) -> None:
         self._schemas: list[CommandSchema] = []
@@ -36,6 +37,8 @@ class CommandList(OptionList):
 
     @on(OptionList.OptionHighlighted)
     def _on_highlight(self, event: OptionList.OptionHighlighted) -> None:
+        if self.has_class("preview"):
+            return
         schema = self.selected_schema
         if schema:
-            self.post_message(self.Selected(schema))
+            self.post_message(self.Selected(schema, self))

@@ -1,17 +1,21 @@
 [project]
 name = "baalbek"
-version = "0.1.0"
+version = "0.1.3"
 description = "Miller column TUI explorer for Click CLI apps"
 readme = "README.md"
 authors = [
     { name = "Michael Katsevman", email = "michael@opennotes.ai" }
 ]
 requires-python = ">=3.11"
+license = "MIT"
 dependencies = [
     "click>=8.3.1",
     "pyte>=0.8.2",
     "textual>=8.0.2",
 ]
+
+[project.urls]
+Repository = "https://github.com/anateus/baalbek"
 
 [build-system]
 requires = ["hatchling"]

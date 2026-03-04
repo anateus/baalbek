@@ -21,24 +21,28 @@ class MillerColumns(Widget):
     def __init__(self, commands: dict[str, CommandSchema], **kwargs) -> None:
         super().__init__(**kwargs)
         self._root_commands = commands
-        self._columns: list[Widget] = []
-        self._path: list[str] = []
+        self._committed: list[Widget] = []
         self._schemas_at_depth: list[dict[str, CommandSchema] | CommandSchema] = []
+        self._preview: list[Widget] = []
+        self._path: list[str] = []
         self._focus_index: int = 0
+
+    @property
+    def _columns(self) -> list[Widget]:
+        return self._committed + self._preview
 
     def compose(self) -> ComposeResult:
         yield Horizontal(id="miller-viewport")
 
     def on_mount(self) -> None:
         col = CommandList(self._root_commands)
-        self._columns.append(col)
+        self._committed.append(col)
         self._schemas_at_depth.append(self._root_commands)
         viewport = self.query_one("#miller-viewport")
         viewport.mount(col)
-        if col.selected_schema:
-            self._show_preview(col.selected_schema)
         self._focus_index = 0
         self._update_focus_styles()
+        self._sync_preview()
 
     @property
     def column_count(self) -> int:
@@ -56,71 +60,100 @@ class MillerColumns(Widget):
         schema = schemas[name]
         self._clear_preview()
         self._path.append(name)
-        self._trim_columns_to(depth + 1)
+        self._trim_committed_to(depth + 1)
         viewport = self.query_one("#miller-viewport")
 
         if schema.is_group:
             if schema.has_own_params:
                 form = OptionForm(schema)
-                self._columns.append(form)
+                self._committed.append(form)
                 self._schemas_at_depth.append(schema)
                 viewport.mount(form)
-                self._focus_index = len(self._columns) - 1
+                self._focus_index = len(self._committed) - 1
             child_list = CommandList(schema.subcommands)
-            self._columns.append(child_list)
+            self._committed.append(child_list)
             self._schemas_at_depth.append(schema.subcommands)
             viewport.mount(child_list)
             if not schema.has_own_params:
-                self._focus_index = len(self._columns) - 1
+                self._focus_index = len(self._committed) - 1
         else:
             form = OptionForm(schema)
-            self._columns.append(form)
+            self._committed.append(form)
             self._schemas_at_depth.append(schema)
             viewport.mount(form)
-            self._focus_index = len(self._columns) - 1
+            self._focus_index = len(self._committed) - 1
             self.post_message(self.CommandSelected(schema))
 
+        self._sync_preview()
         self._update_viewport()
         self._update_focus_styles()
 
-    def _show_preview(self, schema: CommandSchema) -> None:
+    def _sync_preview(self) -> None:
         self._clear_preview()
+        if not self._committed or not isinstance(self._committed[-1], CommandList):
+            return
+        last_cmd_list = self._committed[-1]
+        schema = last_cmd_list.selected_schema
+        if not schema:
+            return
+
         viewport = self.query_one("#miller-viewport")
         if schema.is_group:
             if schema.has_own_params:
                 form = OptionForm(schema)
                 form.add_class("preview")
-                self._columns.append(form)
+                self._preview.append(form)
                 viewport.mount(form)
             child_list = CommandList(schema.subcommands)
             child_list.add_class("preview")
-            self._columns.append(child_list)
+            self._preview.append(child_list)
             viewport.mount(child_list)
         else:
             form = OptionForm(schema)
             form.add_class("preview")
-            self._columns.append(form)
+            self._preview.append(form)
             viewport.mount(form)
         self._update_viewport()
 
     def _clear_preview(self) -> None:
-        to_remove = [c for c in self._columns if c.has_class("preview")]
-        for col in to_remove:
-            self._columns.remove(col)
+        for col in self._preview:
+            col.display = False
             col.remove()
+        self._preview.clear()
 
     def on_command_list_selected(self, event: CommandList.Selected) -> None:
-        self._show_preview(event.schema)
+        sender = event.command_list
+        if sender.has_class("preview"):
+            return
+
+        try:
+            sender_idx = self._committed.index(sender)
+        except ValueError:
+            return
+
+        self._trim_committed_to(sender_idx + 1)
+
+        cmd_lists_before = sum(
+            1 for c in self._committed[:sender_idx]
+            if isinstance(c, CommandList)
+        )
+        self._path = self._path[:cmd_lists_before]
+
+        self._focus_index = min(self._focus_index, len(self._committed) - 1)
+        self._sync_preview()
+        self._update_focus_styles()
 
     @property
     def focused_column(self) -> Widget | None:
-        if 0 <= self._focus_index < len(self._columns):
-            return self._columns[self._focus_index]
+        columns = self._columns
+        if 0 <= self._focus_index < len(columns):
+            return columns[self._focus_index]
         return None
 
     def move_focus_right(self) -> bool:
-        if self._focus_index < len(self._columns) - 1:
-            self._focus_index += 1
+        next_idx = self._focus_index + 1
+        if next_idx < len(self._committed):
+            self._focus_index = next_idx
             self._update_viewport()
             self._update_focus_styles()
             return True
@@ -143,11 +176,15 @@ class MillerColumns(Widget):
         focused = self.focused_column
         if isinstance(focused, CommandList):
             focused.action_cursor_down()
+        elif isinstance(focused, OptionForm):
+            focused.focus_next_field()
 
     def move_cursor_up(self) -> None:
         focused = self.focused_column
         if isinstance(focused, CommandList):
             focused.action_cursor_up()
+        elif isinstance(focused, OptionForm):
+            focused.focus_prev_field()
 
     def select_highlighted(self) -> None:
         focused = self.focused_column
@@ -169,14 +206,15 @@ class MillerColumns(Widget):
         self._clear_preview()
         self._path.pop()
         depth = len(self._path)
-        self._trim_columns_to(depth + 1)
-        self._focus_index = len(self._columns) - 1
+        self._trim_committed_to(depth + 1)
+        self._focus_index = len(self._committed) - 1
+        self._sync_preview()
         self._update_viewport()
         self._update_focus_styles()
 
     def get_command_args(self) -> list[str]:
         args: list[str] = []
-        for col in self._columns:
+        for col in self._committed:
             if isinstance(col, CommandList):
                 if col.selected_schema:
                     args.append(col.selected_schema.name)
@@ -201,23 +239,28 @@ class MillerColumns(Widget):
                         args.append(str(val))
         return args
 
-    def _trim_columns_to(self, count: int) -> None:
-        from baalbek.widgets.history_list import HistoryList
-        from baalbek.widgets.output_viewer import OutputViewer
-
-        while len(self._columns) > count:
-            col = self._columns.pop()
-            if not isinstance(col, (HistoryList, OutputViewer)):
-                if self._schemas_at_depth:
-                    self._schemas_at_depth.pop()
+    def _trim_committed_to(self, count: int) -> None:
+        while len(self._committed) > count:
+            col = self._committed.pop()
+            if self._schemas_at_depth:
+                self._schemas_at_depth.pop()
             col.remove()
+
+    def has_history(self) -> bool:
+        from baalbek.widgets.history_list import HistoryList
+
+        return any(isinstance(c, HistoryList) for c in self._committed)
+
+    def hide_history(self) -> None:
+        self._remove_history_columns()
+        self._update_viewport()
 
     def show_history(self, records: list) -> None:
         from baalbek.widgets.history_list import HistoryList
 
         self._remove_history_columns()
         history = HistoryList(records, id="history-column")
-        self._columns.append(history)
+        self._committed.append(history)
         viewport = self.query_one("#miller-viewport")
         viewport.mount(history)
         self._update_viewport()
@@ -225,13 +268,13 @@ class MillerColumns(Widget):
     def show_output(self, raw_output: bytes) -> None:
         from baalbek.widgets.output_viewer import OutputViewer
 
-        for col in list(self._columns):
+        for col in list(self._committed):
             if isinstance(col, OutputViewer):
-                self._columns.remove(col)
+                self._committed.remove(col)
                 col.remove()
                 break
         viewer = OutputViewer(raw_output, id="output-column")
-        self._columns.append(viewer)
+        self._committed.append(viewer)
         viewport = self.query_one("#miller-viewport")
         viewport.mount(viewer)
         self._update_viewport()
@@ -240,14 +283,20 @@ class MillerColumns(Widget):
         from baalbek.widgets.history_list import HistoryList
         from baalbek.widgets.output_viewer import OutputViewer
 
-        to_remove = [c for c in self._columns if isinstance(c, (HistoryList, OutputViewer))]
+        to_remove = [c for c in self._committed if isinstance(c, (HistoryList, OutputViewer))]
         for col in to_remove:
-            self._columns.remove(col)
+            self._committed.remove(col)
             col.remove()
 
     def _update_viewport(self) -> None:
-        for i, col in enumerate(self._columns):
-            if i < len(self._columns) - self.MAX_VISIBLE:
-                col.display = False
-            else:
+        columns = self._columns
+        n = len(columns)
+        if n <= self.MAX_VISIBLE:
+            for col in columns:
                 col.display = True
+            return
+        start = min(self._focus_index, n - self.MAX_VISIBLE)
+        start = max(0, start)
+        end = start + self.MAX_VISIBLE
+        for i, col in enumerate(columns):
+            col.display = start <= i < end

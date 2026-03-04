@@ -10,6 +10,7 @@ from baalbek.introspect import introspect_click_app
 from baalbek.modes import InputMode, ModeManager
 from baalbek.widgets.breadcrumbs import Breadcrumbs
 from baalbek.widgets.miller import MillerColumns
+from baalbek.widgets.option_form import OptionForm
 
 
 class CommanderScreen(Screen):
@@ -19,13 +20,15 @@ class CommanderScreen(Screen):
         Binding("escape", "quit_or_normal", "Quit/Normal"),
     ]
 
-    def __init__(self, cli: click.BaseCommand, **kwargs) -> None:
+    def __init__(self, cli: click.BaseCommand, app_name: str | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
         self._cli = cli
+        self._app_name = app_name or cli.name or "CLI"
         self._mode_mgr = ModeManager()
         self._commands = introspect_click_app(cli, exclude_names={"tui"})
 
     def compose(self) -> ComposeResult:
+        yield Static(f"[b]{self._app_name}[/b]", id="app-title", markup=True)
         yield Breadcrumbs(id="breadcrumbs")
         yield MillerColumns(self._commands, id="miller")
         yield Static("NORMAL", id="mode-indicator")
@@ -37,6 +40,10 @@ class CommanderScreen(Screen):
             if key == "escape":
                 self._mode_mgr.exit_edit()
                 self._update_mode_indicator()
+                mc = self.query_one(MillerColumns)
+                focused = mc.focused_column
+                if isinstance(focused, OptionForm):
+                    focused.blur_highlighted()
                 event.prevent_default()
             return
 
@@ -53,6 +60,10 @@ class CommanderScreen(Screen):
         elif key == "i":
             self._mode_mgr.enter_edit()
             self._update_mode_indicator()
+            mc = self.query_one(MillerColumns)
+            focused = mc.focused_column
+            if isinstance(focused, OptionForm):
+                focused.focus_highlighted()
             event.prevent_default()
         elif key in ("j", "down"):
             mc = self.query_one(MillerColumns)
@@ -123,6 +134,9 @@ class CommanderScreen(Screen):
         from baalbek.db import HistoryDB
 
         mc = self.query_one(MillerColumns)
+        if mc.has_history():
+            mc.hide_history()
+            return
         db = HistoryDB(self.app._db_path)
         try:
             records = db.list_runs()

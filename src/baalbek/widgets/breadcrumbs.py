@@ -15,7 +15,8 @@ class Breadcrumbs(Static):
     def render_text(self) -> str:
         if not self.path:
             return ""
-        return " > ".join(self.path)
+        items = [f"[on #333333] {p} [/]" for p in self.path]
+        return " [dim]▸[/] ".join(items)
 
     def watch_path(self) -> None:
         self.update(self.render_text)

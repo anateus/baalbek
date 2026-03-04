@@ -35,4 +35,4 @@ async def test_separator():
         bc = pilot.app.query_one(Breadcrumbs)
         bc.path = ["a", "b"]
         await pilot.pause()
-        assert ">" in bc.render_text
+        assert "▸" in bc.render_text
