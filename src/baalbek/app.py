@@ -33,6 +33,7 @@ def _detect_app_info(cli: click.BaseCommand) -> tuple[str, str | None]:
 
 class Baalbek(App):
     CSS_PATH = "baalbek.tcss"
+    ALLOW_SELECT = False
 
     def __init__(self, cli: click.BaseCommand, db_path: Path | None = None, **kwargs) -> None:
         super().__init__(**kwargs)

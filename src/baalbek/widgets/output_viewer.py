@@ -5,7 +5,7 @@ from rich.text import Text
 from textual.widgets import Static
 
 
-def raw_to_rich_text(raw_output: bytes, cols: int = 120, rows: int = 500) -> Text:
+def raw_to_rich_text(raw_output: bytes, cols: int = 200, rows: int = 500) -> Text:
     screen = pyte.Screen(cols, rows)
     stream = pyte.ByteStream(screen)
     stream.feed(raw_output)
