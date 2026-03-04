@@ -9,6 +9,8 @@ from baalbek.schemas import CommandSchema
 
 
 class CommandList(OptionList):
+    can_focus = False
+
     class Selected(Message):
         def __init__(self, schema: CommandSchema, command_list: CommandList) -> None:
             super().__init__()

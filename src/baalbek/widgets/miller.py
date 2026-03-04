@@ -54,6 +54,8 @@ class MillerColumns(Widget):
 
     def select_command(self, name: str) -> None:
         depth = len(self._path)
+        if depth >= len(self._schemas_at_depth):
+            return
         schemas = self._schemas_at_depth[depth]
         if not isinstance(schemas, dict) or name not in schemas:
             return
