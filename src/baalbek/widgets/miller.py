@@ -80,10 +80,42 @@ class MillerColumns(Widget):
         self._trim_columns_to(depth + 1)
         self._update_viewport()
 
+    def get_command_args(self) -> list[str]:
+        args: list[str] = []
+        for col in self._columns:
+            if isinstance(col, CommandList):
+                if col.selected_schema:
+                    args.append(col.selected_schema.name)
+            elif isinstance(col, OptionForm):
+                schema = col._schema
+                values = col.get_values()
+                for opt in schema.options:
+                    val = values.get(opt.name)
+                    if val is None:
+                        continue
+                    if opt.is_flag:
+                        if val and val != opt.default:
+                            args.append(opt.opts[0])
+                        elif not val and opt.default:
+                            if opt.secondary_opts:
+                                args.append(opt.secondary_opts[0])
+                    elif val != "" and str(val) != str(opt.default):
+                        args.extend([opt.opts[0], str(val)])
+                for arg_schema in schema.arguments:
+                    val = values.get(arg_schema.name)
+                    if val and val != "":
+                        args.append(str(val))
+        return args
+
     def _trim_columns_to(self, count: int) -> None:
+        from baalbek.widgets.history_list import HistoryList
+        from baalbek.widgets.output_viewer import OutputViewer
+
         while len(self._columns) > count:
             col = self._columns.pop()
-            self._schemas_at_depth.pop()
+            if not isinstance(col, (HistoryList, OutputViewer)):
+                if self._schemas_at_depth:
+                    self._schemas_at_depth.pop()
             col.remove()
 
     def show_history(self, records: list) -> None:

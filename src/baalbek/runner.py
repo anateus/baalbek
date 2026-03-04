@@ -18,7 +18,10 @@ class RunResult:
     plain_output: str
 
 
-def run_command(args: list[str], rows: int = 24, cols: int = 80) -> RunResult:
+def run_command(args: list[str], rows: int = 24, cols: int = 80, timeout: float = 300) -> RunResult:
+    import signal
+    import time
+
     pid, master_fd = pty.fork()
 
     if pid == 0:
@@ -29,24 +32,17 @@ def run_command(args: list[str], rows: int = 24, cols: int = 80) -> RunResult:
     )
 
     raw = b""
+    start_time = time.monotonic()
+    child_exited = False
+
     try:
         while True:
-            ready, _, _ = select.select([master_fd], [], [], 0.5)
-            if not ready:
+            if time.monotonic() - start_time > timeout:
+                os.kill(pid, signal.SIGTERM)
                 break
-            try:
-                chunk = os.read(master_fd, 4096)
-                if not chunk:
-                    break
-                raw += chunk
-            except OSError:
-                break
-    finally:
-        try:
-            while True:
-                ready, _, _ = select.select([master_fd], [], [], 0.1)
-                if not ready:
-                    break
+
+            ready, _, _ = select.select([master_fd], [], [], 0.1)
+            if ready:
                 try:
                     chunk = os.read(master_fd, 4096)
                     if not chunk:
@@ -54,11 +50,29 @@ def run_command(args: list[str], rows: int = 24, cols: int = 80) -> RunResult:
                     raw += chunk
                 except OSError:
                     break
-        except OSError:
-            pass
+
+            result = os.waitpid(pid, os.WNOHANG)
+            if result[0] != 0:
+                child_exited = True
+                while True:
+                    r, _, _ = select.select([master_fd], [], [], 0.1)
+                    if not r:
+                        break
+                    try:
+                        chunk = os.read(master_fd, 4096)
+                        if not chunk:
+                            break
+                        raw += chunk
+                    except OSError:
+                        break
+                break
+    finally:
         os.close(master_fd)
 
-    _, status = os.waitpid(pid, 0)
+    if child_exited:
+        _, status = result
+    else:
+        _, status = os.waitpid(pid, 0)
     exit_code = os.waitstatus_to_exitcode(status)
 
     screen = pyte.Screen(cols, rows)

@@ -134,4 +134,4 @@ class CommanderScreen(Screen):
 
     def build_command_args(self) -> list[str]:
         mc = self.query_one(MillerColumns)
-        return list(mc.current_path)
+        return mc.get_command_args()

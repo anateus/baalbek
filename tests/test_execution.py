@@ -31,4 +31,4 @@ async def test_build_command_args():
         assert isinstance(screen, CommanderScreen)
         args = screen.build_command_args()
         assert isinstance(args, list)
-        assert args == []
+        assert args == ["greet"]
