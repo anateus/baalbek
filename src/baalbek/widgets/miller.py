@@ -7,7 +7,7 @@ from textual.widget import Widget
 
 from baalbek.schemas import CommandSchema
 from baalbek.widgets.command_list import CommandList
-from baalbek.widgets.option_form import OptionForm
+from baalbek.widgets.parameter_list import ParameterList
 
 
 class MillerColumns(Widget):
@@ -67,7 +67,7 @@ class MillerColumns(Widget):
 
         if schema.is_group:
             if schema.has_own_params:
-                form = OptionForm(schema)
+                form = ParameterList(schema)
                 self._committed.append(form)
                 self._schemas_at_depth.append(schema)
                 viewport.mount(form)
@@ -79,7 +79,7 @@ class MillerColumns(Widget):
             if not schema.has_own_params:
                 self._focus_index = len(self._committed) - 1
         else:
-            form = OptionForm(schema)
+            form = ParameterList(schema)
             self._committed.append(form)
             self._schemas_at_depth.append(schema)
             viewport.mount(form)
@@ -102,7 +102,7 @@ class MillerColumns(Widget):
         viewport = self.query_one("#miller-viewport")
         if schema.is_group:
             if schema.has_own_params:
-                form = OptionForm(schema)
+                form = ParameterList(schema)
                 form.add_class("preview")
                 self._preview.append(form)
                 viewport.mount(form)
@@ -111,7 +111,7 @@ class MillerColumns(Widget):
             self._preview.append(child_list)
             viewport.mount(child_list)
         else:
-            form = OptionForm(schema)
+            form = ParameterList(schema)
             form.add_class("preview")
             self._preview.append(form)
             viewport.mount(form)
@@ -122,6 +122,17 @@ class MillerColumns(Widget):
             col.display = False
             col.remove()
         self._preview.clear()
+
+    def on_click(self, event) -> None:
+        widget = event.widget
+        while widget is not None and widget is not self:
+            if widget in self._committed:
+                idx = self._committed.index(widget)
+                if idx != self._focus_index:
+                    self._focus_index = idx
+                    self._update_focus_styles()
+                break
+            widget = widget.parent
 
     def on_command_list_selected(self, event: CommandList.Selected) -> None:
         sender = event.command_list
@@ -176,24 +187,20 @@ class MillerColumns(Widget):
 
     def move_cursor_down(self) -> None:
         focused = self.focused_column
-        if isinstance(focused, CommandList):
+        if isinstance(focused, (CommandList, ParameterList)):
             focused.action_cursor_down()
-        elif isinstance(focused, OptionForm):
-            focused.focus_next_field()
 
     def move_cursor_up(self) -> None:
         focused = self.focused_column
-        if isinstance(focused, CommandList):
+        if isinstance(focused, (CommandList, ParameterList)):
             focused.action_cursor_up()
-        elif isinstance(focused, OptionForm):
-            focused.focus_prev_field()
 
     def select_highlighted(self) -> None:
         focused = self.focused_column
         if isinstance(focused, CommandList) and focused.selected_schema:
             self.select_command(focused.selected_schema.name)
-        elif isinstance(focused, OptionForm):
-            self.move_focus_right()
+        elif isinstance(focused, ParameterList):
+            focused.open_edit_for_highlighted()
 
     def _update_focus_styles(self) -> None:
         for i, col in enumerate(self._columns):
@@ -220,7 +227,7 @@ class MillerColumns(Widget):
             if isinstance(col, CommandList):
                 if col.selected_schema:
                     args.append(col.selected_schema.name)
-            elif isinstance(col, OptionForm):
+            elif isinstance(col, ParameterList):
                 schema = col._schema
                 values = col.get_values()
                 for opt in schema.options:
@@ -242,10 +249,14 @@ class MillerColumns(Widget):
         return args
 
     def _trim_committed_to(self, count: int) -> None:
+        from baalbek.widgets.history_list import HistoryList
+        from baalbek.widgets.output_viewer import OutputViewer
+
         while len(self._committed) > count:
             col = self._committed.pop()
-            if self._schemas_at_depth:
-                self._schemas_at_depth.pop()
+            if not isinstance(col, (HistoryList, OutputViewer)):
+                if self._schemas_at_depth:
+                    self._schemas_at_depth.pop()
             col.remove()
 
     def has_history(self) -> bool:

@@ -7,17 +7,16 @@ from textual.screen import Screen
 from textual.widgets import Footer, Static
 
 from baalbek.introspect import introspect_click_app
-from baalbek.modes import InputMode, ModeManager
 from baalbek.widgets.breadcrumbs import Breadcrumbs
 from baalbek.widgets.miller import MillerColumns
-from baalbek.widgets.option_form import OptionForm
+from baalbek.widgets.parameter_list import ParameterList
 
 
 class CommanderScreen(Screen):
     BINDINGS = [
         Binding("ctrl+r", "run_command", "Run"),
         Binding("ctrl+h", "toggle_history", "History"),
-        Binding("escape", "quit_or_normal", "Quit/Normal"),
+        Binding("escape", "quit", "Quit"),
     ]
 
     def __init__(self, cli: click.BaseCommand, app_name: str | None = None, app_description: str | None = None, **kwargs) -> None:
@@ -25,7 +24,6 @@ class CommanderScreen(Screen):
         self._cli = cli
         self._app_name = app_name or cli.name or "CLI"
         self._app_description = app_description
-        self._mode_mgr = ModeManager()
         self._commands = introspect_click_app(cli, exclude_names={"tui"})
 
     def compose(self) -> ComposeResult:
@@ -35,21 +33,10 @@ class CommanderScreen(Screen):
         yield Static(title, id="app-title", markup=True)
         yield Breadcrumbs(id="breadcrumbs")
         yield MillerColumns(self._commands, id="miller")
-        yield Static("NORMAL", id="mode-indicator")
         yield Footer()
 
     def on_key(self, event) -> None:
         key = event.key
-        if self._mode_mgr.mode == InputMode.EDIT:
-            if key == "escape":
-                self._mode_mgr.exit_edit()
-                self._update_mode_indicator()
-                mc = self.query_one(MillerColumns)
-                focused = mc.focused_column
-                if isinstance(focused, OptionForm):
-                    focused.blur_highlighted()
-                event.prevent_default()
-            return
 
         if key in ("h", "left"):
             mc = self.query_one(MillerColumns)
@@ -61,17 +48,11 @@ class CommanderScreen(Screen):
             from baalbek.widgets.output_viewer import OutputViewer
             if isinstance(mc.focused_column, OutputViewer):
                 self._zoom_output(mc.focused_column._raw_output)
+            elif isinstance(mc.focused_column, ParameterList):
+                mc.select_highlighted()
             else:
                 mc.move_focus_right()
                 self._update_breadcrumbs()
-            event.prevent_default()
-        elif key == "i":
-            self._mode_mgr.enter_edit()
-            self._update_mode_indicator()
-            mc = self.query_one(MillerColumns)
-            focused = mc.focused_column
-            if isinstance(focused, OptionForm):
-                focused.focus_highlighted()
             event.prevent_default()
         elif key in ("j", "down"):
             mc = self.query_one(MillerColumns)
@@ -86,20 +67,8 @@ class CommanderScreen(Screen):
         mc = self.query_one(MillerColumns)
         self.query_one(Breadcrumbs).path = mc.current_path
 
-    def _update_mode_indicator(self) -> None:
-        mode = self._mode_mgr.mode
-        indicator = self.query_one("#mode-indicator", Static)
-        if mode == InputMode.NORMAL:
-            indicator.update("NORMAL")
-        else:
-            indicator.update("EDIT")
-
-    def action_quit_or_normal(self) -> None:
-        if self._mode_mgr.mode == InputMode.EDIT:
-            self._mode_mgr.exit_edit()
-            self._update_mode_indicator()
-        else:
-            self.app.exit()
+    def action_quit(self) -> None:
+        self.app.exit()
 
     def action_run_command(self) -> None:
         import json

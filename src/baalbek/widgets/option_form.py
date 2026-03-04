@@ -8,8 +8,6 @@ from textual.widgets import Checkbox, Input, Label, Select, Static
 
 from baalbek.schemas import CommandSchema
 
-FIELD_HIGHLIGHT = "field-highlight"
-
 
 def _default_str(value: object) -> str:
     if value is None:
@@ -25,7 +23,6 @@ class OptionForm(VerticalScroll):
         super().__init__(**kwargs)
         self._schema = schema
         self._widget_map: dict[str, str] = {}
-        self._focus_idx: int = -1
 
     def compose(self) -> ComposeResult:
         yield Static(f"[b]{self._schema.name}[/b]", markup=True)
@@ -70,44 +67,6 @@ class OptionForm(VerticalScroll):
                         id=widget_id,
                     )
 
-    @property
-    def _focusable_ids(self) -> list[str]:
-        return list(self._widget_map.values())
-
-    def _highlight_field(self, idx: int) -> None:
-        ids = self._focusable_ids
-        for i, wid in enumerate(ids):
-            widget = self.query_one(f"#{wid}")
-            if i == idx:
-                widget.add_class(FIELD_HIGHLIGHT)
-            else:
-                widget.remove_class(FIELD_HIGHLIGHT)
-        self._focus_idx = idx
-        self.query_one(f"#{ids[idx]}").scroll_visible()
-
-    def focus_next_field(self) -> None:
-        ids = self._focusable_ids
-        if not ids:
-            return
-        self._highlight_field(min(self._focus_idx + 1, len(ids) - 1))
-
-    def focus_prev_field(self) -> None:
-        ids = self._focusable_ids
-        if not ids:
-            return
-        self._highlight_field(max(self._focus_idx - 1, 0))
-
-    def focus_highlighted(self) -> None:
-        ids = self._focusable_ids
-        if not ids:
-            return
-        if self._focus_idx < 0:
-            self._focus_idx = 0
-        self.query_one(f"#{ids[self._focus_idx]}").focus()
-
-    def blur_highlighted(self) -> None:
-        self.screen.set_focus(None)
-
     def get_values(self) -> dict[str, Any]:
         values: dict[str, Any] = {}
         for param_name, widget_id in self._widget_map.items():
@@ -122,3 +81,30 @@ class OptionForm(VerticalScroll):
             elif isinstance(widget, Select):
                 values[param_name] = widget.value
         return values
+
+    def set_values(self, values: dict[str, Any]) -> None:
+        for param_name, val in values.items():
+            widget_id = self._widget_map.get(param_name)
+            if not widget_id:
+                continue
+            try:
+                widget = self.query_one(f"#{widget_id}")
+            except Exception:
+                continue
+            if isinstance(widget, Input):
+                widget.value = str(val) if val else ""
+            elif isinstance(widget, Checkbox):
+                widget.value = bool(val)
+            elif isinstance(widget, Select):
+                widget.value = val
+
+    def focus_param(self, name: str) -> None:
+        widget_id = self._widget_map.get(name)
+        if not widget_id:
+            return
+        try:
+            widget = self.query_one(f"#{widget_id}")
+        except Exception:
+            return
+        widget.scroll_visible()
+        widget.focus()

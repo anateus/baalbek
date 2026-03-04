@@ -21,22 +21,15 @@ MillerColumns {
     padding: 0 1;
 }
 
-#mode-indicator {
-    height: 1;
-    background: $surface;
-    dock: bottom;
-    padding: 0 1;
-}
-
 CommandList {
     width: 1fr;
     border: solid $primary;
     min-width: 20;
 }
 
-OptionForm {
+ParameterList {
     width: 1fr;
-    border: solid $secondary;
+    border: double $secondary;
     min-width: 20;
 }
 
@@ -57,10 +50,17 @@ OutputViewer {
     border: solid $accent;
 }
 
-.field-highlight {
-    border: tall $accent;
-}
-
 #zoom-content {
     padding: 1 2;
+}
+
+ParameterFormModal {
+    align: center middle;
+}
+
+#param-modal-container {
+    width: 80%;
+    height: 80%;
+    border: thick $primary;
+    background: $surface;
 }
