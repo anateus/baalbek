@@ -1,0 +1,91 @@
+from __future__ import annotations
+
+import click
+from textual.app import ComposeResult
+from textual.binding import Binding
+from textual.screen import Screen
+from textual.widgets import Footer, Static
+
+from baalbek.introspect import introspect_click_app
+from baalbek.modes import InputMode, ModeManager
+from baalbek.widgets.breadcrumbs import Breadcrumbs
+from baalbek.widgets.miller import MillerColumns
+
+
+class CommanderScreen(Screen):
+    BINDINGS = [
+        Binding("ctrl+r", "run_command", "Run"),
+        Binding("ctrl+h", "toggle_history", "History"),
+        Binding("escape", "quit_or_normal", "Quit/Normal"),
+    ]
+
+    def __init__(self, cli: click.BaseCommand, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._cli = cli
+        self._mode_mgr = ModeManager()
+        self._commands = introspect_click_app(cli, exclude_names={"tui"})
+
+    def compose(self) -> ComposeResult:
+        yield Breadcrumbs(id="breadcrumbs")
+        yield MillerColumns(self._commands, id="miller")
+        yield Static("NORMAL", id="mode-indicator")
+        yield Footer()
+
+    def on_key(self, event) -> None:
+        key = event.key
+        if self._mode_mgr.mode == InputMode.EDIT:
+            if key == "escape":
+                self._mode_mgr.exit_edit()
+                self._update_mode_indicator()
+                event.prevent_default()
+            return
+
+        if key in ("h", "left"):
+            self.query_one(MillerColumns).go_back()
+            self._update_breadcrumbs()
+            event.prevent_default()
+        elif key in ("l", "right", "enter"):
+            mc = self.query_one(MillerColumns)
+            from baalbek.widgets.command_list import CommandList
+
+            for col in reversed(mc._columns):
+                if isinstance(col, CommandList) and col.selected_schema:
+                    mc.select_command(col.selected_schema.name)
+                    self._update_breadcrumbs()
+                    break
+            event.prevent_default()
+        elif key == "i":
+            self._mode_mgr.enter_edit()
+            self._update_mode_indicator()
+            event.prevent_default()
+        elif self._mode_mgr.is_navigation_key(key):
+            event.prevent_default()
+
+    def _update_breadcrumbs(self) -> None:
+        mc = self.query_one(MillerColumns)
+        self.query_one(Breadcrumbs).path = mc.current_path
+
+    def _update_mode_indicator(self) -> None:
+        mode = self._mode_mgr.mode
+        indicator = self.query_one("#mode-indicator", Static)
+        if mode == InputMode.NORMAL:
+            indicator.update("NORMAL")
+        else:
+            indicator.update("EDIT")
+
+    def action_quit_or_normal(self) -> None:
+        if self._mode_mgr.mode == InputMode.EDIT:
+            self._mode_mgr.exit_edit()
+            self._update_mode_indicator()
+        else:
+            self.app.exit()
+
+    def action_run_command(self) -> None:
+        pass
+
+    def action_toggle_history(self) -> None:
+        pass
+
+    def build_command_args(self) -> list[str]:
+        mc = self.query_one(MillerColumns)
+        return list(mc.current_path)
