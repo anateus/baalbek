@@ -13,21 +13,7 @@ _DEFAULT_DB_PATH = Path.home() / ".local" / "share" / "baalbek" / "history.db"
 
 
 class Baalbek(App):
-    CSS = """
-    #miller-viewport {
-        height: 1fr;
-    }
-    #breadcrumbs {
-        height: 1;
-        background: $surface;
-        padding: 0 1;
-    }
-    #mode-indicator {
-        height: 1;
-        background: $surface;
-        padding: 0 1;
-    }
-    """
+    CSS_PATH = "baalbek.tcss"
 
     def __init__(self, cli: click.BaseCommand, db_path: Path | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
