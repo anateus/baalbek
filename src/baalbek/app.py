@@ -12,20 +12,23 @@ from baalbek.screens.commander import CommanderScreen
 _DEFAULT_DB_PATH = Path.home() / ".local" / "share" / "baalbek" / "history.db"
 
 
-def _detect_app_name(cli: click.BaseCommand) -> str:
-    if cli.name:
-        return cli.name
+def _detect_app_info(cli: click.BaseCommand) -> tuple[str, str | None]:
+    cli_name = cli.name or ""
+    pyproject_name = ""
+    description = None
     try:
         import tomllib
         for candidate in [Path("pyproject.toml"), Path.cwd() / "pyproject.toml"]:
             if candidate.exists():
                 data = tomllib.loads(candidate.read_text())
-                name = data.get("project", {}).get("name")
-                if name:
-                    return name
+                project = data.get("project", {})
+                pyproject_name = project.get("name", "")
+                description = project.get("description")
+                break
     except Exception:
         pass
-    return "CLI"
+    name = pyproject_name if len(pyproject_name) >= len(cli_name) else cli_name
+    return (name or "CLI", description)
 
 
 class Baalbek(App):
@@ -34,11 +37,11 @@ class Baalbek(App):
     def __init__(self, cli: click.BaseCommand, db_path: Path | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
         self._cli = cli
-        self._app_name = _detect_app_name(cli)
+        self._app_name, self._app_description = _detect_app_info(cli)
         self._db_path = db_path or _DEFAULT_DB_PATH
 
     def on_mount(self) -> None:
-        self.push_screen(CommanderScreen(self._cli, app_name=self._app_name))
+        self.push_screen(CommanderScreen(self._cli, app_name=self._app_name, app_description=self._app_description))
 
 
 def tui(

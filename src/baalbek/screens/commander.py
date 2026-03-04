@@ -20,15 +20,19 @@ class CommanderScreen(Screen):
         Binding("escape", "quit_or_normal", "Quit/Normal"),
     ]
 
-    def __init__(self, cli: click.BaseCommand, app_name: str | None = None, **kwargs) -> None:
+    def __init__(self, cli: click.BaseCommand, app_name: str | None = None, app_description: str | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
         self._cli = cli
         self._app_name = app_name or cli.name or "CLI"
+        self._app_description = app_description
         self._mode_mgr = ModeManager()
         self._commands = introspect_click_app(cli, exclude_names={"tui"})
 
     def compose(self) -> ComposeResult:
-        yield Static(f"[b]{self._app_name}[/b]", id="app-title", markup=True)
+        title = f"[b]{self._app_name}[/b]"
+        if self._app_description:
+            title += f" [dim]- {self._app_description}[/dim]"
+        yield Static(title, id="app-title", markup=True)
         yield Breadcrumbs(id="breadcrumbs")
         yield MillerColumns(self._commands, id="miller")
         yield Static("NORMAL", id="mode-indicator")
