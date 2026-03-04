@@ -86,6 +86,39 @@ class MillerColumns(Widget):
             self._schemas_at_depth.pop()
             col.remove()
 
+    def show_history(self, records: list) -> None:
+        from baalbek.widgets.history_list import HistoryList
+
+        self._remove_history_columns()
+        history = HistoryList(records, id="history-column")
+        self._columns.append(history)
+        viewport = self.query_one("#miller-viewport")
+        viewport.mount(history)
+        self._update_viewport()
+
+    def show_output(self, raw_output: bytes) -> None:
+        from baalbek.widgets.output_viewer import OutputViewer
+
+        for col in list(self._columns):
+            if isinstance(col, OutputViewer):
+                self._columns.remove(col)
+                col.remove()
+                break
+        viewer = OutputViewer(raw_output, id="output-column")
+        self._columns.append(viewer)
+        viewport = self.query_one("#miller-viewport")
+        viewport.mount(viewer)
+        self._update_viewport()
+
+    def _remove_history_columns(self) -> None:
+        from baalbek.widgets.history_list import HistoryList
+        from baalbek.widgets.output_viewer import OutputViewer
+
+        to_remove = [c for c in self._columns if isinstance(c, (HistoryList, OutputViewer))]
+        for col in to_remove:
+            self._columns.remove(col)
+            col.remove()
+
     def _update_viewport(self) -> None:
         for i, col in enumerate(self._columns):
             if i < len(self._columns) - self.MAX_VISIBLE:

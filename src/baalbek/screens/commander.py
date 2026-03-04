@@ -109,8 +109,28 @@ class CommanderScreen(Screen):
         with self.app.suspend():
             _execute()
 
+        mc = self.query_one(MillerColumns)
+        db = HistoryDB(self.app._db_path)
+        try:
+            records = db.list_runs()
+        finally:
+            db.close()
+        mc.show_history(records)
+
     def action_toggle_history(self) -> None:
-        pass
+        from baalbek.db import HistoryDB
+
+        mc = self.query_one(MillerColumns)
+        db = HistoryDB(self.app._db_path)
+        try:
+            records = db.list_runs()
+        finally:
+            db.close()
+        mc.show_history(records)
+
+    def on_history_list_selected(self, event) -> None:
+        mc = self.query_one(MillerColumns)
+        mc.show_output(event.record.raw_output)
 
     def build_command_args(self) -> list[str]:
         mc = self.query_one(MillerColumns)
