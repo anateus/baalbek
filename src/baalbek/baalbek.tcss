@@ -27,9 +27,9 @@ CommandList {
 }
 
 OptionForm {
-    width: 2fr;
+    width: 1fr;
     border: solid $secondary;
-    min-width: 30;
+    min-width: 20;
 }
 
 HistoryList {
@@ -42,4 +42,8 @@ OutputViewer {
     width: 2fr;
     border: solid $success;
     min-width: 30;
+}
+
+.focused {
+    border: solid $accent;
 }

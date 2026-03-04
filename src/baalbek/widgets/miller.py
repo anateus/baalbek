@@ -24,6 +24,7 @@ class MillerColumns(Widget):
         self._columns: list[Widget] = []
         self._path: list[str] = []
         self._schemas_at_depth: list[dict[str, CommandSchema] | CommandSchema] = []
+        self._focus_index: int = 0
 
     def compose(self) -> ComposeResult:
         yield Horizontal(id="miller-viewport")
@@ -59,39 +60,74 @@ class MillerColumns(Widget):
                 self._columns.append(form)
                 self._schemas_at_depth.append(schema)
                 viewport.mount(form)
+                self._focus_index = len(self._columns) - 1
             child_list = CommandList(schema.subcommands)
             self._columns.append(child_list)
             self._schemas_at_depth.append(schema.subcommands)
             viewport.mount(child_list)
+            if not schema.has_own_params:
+                self._focus_index = len(self._columns) - 1
         else:
             form = OptionForm(schema)
             self._columns.append(form)
             self._schemas_at_depth.append(schema)
             viewport.mount(form)
+            self._focus_index = len(self._columns) - 1
             self.post_message(self.CommandSelected(schema))
 
         self._update_viewport()
+        self._update_focus_styles()
 
-    def _active_command_list(self) -> CommandList | None:
-        for col in reversed(self._columns):
-            if isinstance(col, CommandList) and col.display:
-                return col
+    @property
+    def focused_column(self) -> Widget | None:
+        if 0 <= self._focus_index < len(self._columns):
+            return self._columns[self._focus_index]
         return None
 
+    def move_focus_right(self) -> bool:
+        if self._focus_index < len(self._columns) - 1:
+            self._focus_index += 1
+            self._update_viewport()
+            self._update_focus_styles()
+            return True
+        focused = self.focused_column
+        if isinstance(focused, CommandList) and focused.selected_schema:
+            self.select_command(focused.selected_schema.name)
+            return True
+        return False
+
+    def move_focus_left(self) -> bool:
+        if self._focus_index > 0:
+            self._focus_index -= 1
+            self._update_viewport()
+            self._update_focus_styles()
+            return True
+        self.go_back()
+        return True
+
     def move_cursor_down(self) -> None:
-        cl = self._active_command_list()
-        if cl:
-            cl.action_cursor_down()
+        focused = self.focused_column
+        if isinstance(focused, CommandList):
+            focused.action_cursor_down()
 
     def move_cursor_up(self) -> None:
-        cl = self._active_command_list()
-        if cl:
-            cl.action_cursor_up()
+        focused = self.focused_column
+        if isinstance(focused, CommandList):
+            focused.action_cursor_up()
 
     def select_highlighted(self) -> None:
-        cl = self._active_command_list()
-        if cl and cl.selected_schema:
-            self.select_command(cl.selected_schema.name)
+        focused = self.focused_column
+        if isinstance(focused, CommandList) and focused.selected_schema:
+            self.select_command(focused.selected_schema.name)
+        elif isinstance(focused, OptionForm):
+            self.move_focus_right()
+
+    def _update_focus_styles(self) -> None:
+        for i, col in enumerate(self._columns):
+            if i == self._focus_index:
+                col.add_class("focused")
+            else:
+                col.remove_class("focused")
 
     def go_back(self) -> None:
         if not self._path:
@@ -99,7 +135,9 @@ class MillerColumns(Widget):
         self._path.pop()
         depth = len(self._path)
         self._trim_columns_to(depth + 1)
+        self._focus_index = len(self._columns) - 1
         self._update_viewport()
+        self._update_focus_styles()
 
     def get_command_args(self) -> list[str]:
         args: list[str] = []

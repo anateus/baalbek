@@ -41,12 +41,13 @@ class CommanderScreen(Screen):
             return
 
         if key in ("h", "left"):
-            self.query_one(MillerColumns).go_back()
+            mc = self.query_one(MillerColumns)
+            mc.move_focus_left()
             self._update_breadcrumbs()
             event.prevent_default()
         elif key in ("l", "right", "enter"):
             mc = self.query_one(MillerColumns)
-            mc.select_highlighted()
+            mc.move_focus_right()
             self._update_breadcrumbs()
             event.prevent_default()
         elif key == "i":
