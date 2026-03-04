@@ -81,7 +81,33 @@ class CommanderScreen(Screen):
             self.app.exit()
 
     def action_run_command(self) -> None:
-        pass
+        import json
+
+        from baalbek.db import HistoryDB
+        from baalbek.runner import run_command
+
+        args = self.build_command_args()
+        if not args:
+            return
+
+        command_str = " ".join(args)
+
+        def _execute():
+            result = run_command(args)
+            db = HistoryDB(self.app._db_path)
+            try:
+                db.insert_run(
+                    command=command_str,
+                    args_json=json.dumps(args),
+                    exit_code=result.exit_code,
+                    raw_output=result.raw_output,
+                    plain_output=result.plain_output,
+                )
+            finally:
+                db.close()
+
+        with self.app.suspend():
+            _execute()
 
     def action_toggle_history(self) -> None:
         pass
