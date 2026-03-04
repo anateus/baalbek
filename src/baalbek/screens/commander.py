@@ -46,19 +46,20 @@ class CommanderScreen(Screen):
             event.prevent_default()
         elif key in ("l", "right", "enter"):
             mc = self.query_one(MillerColumns)
-            from baalbek.widgets.command_list import CommandList
-
-            for col in reversed(mc._columns):
-                if isinstance(col, CommandList) and col.selected_schema:
-                    mc.select_command(col.selected_schema.name)
-                    self._update_breadcrumbs()
-                    break
+            mc.select_highlighted()
+            self._update_breadcrumbs()
             event.prevent_default()
         elif key == "i":
             self._mode_mgr.enter_edit()
             self._update_mode_indicator()
             event.prevent_default()
-        elif self._mode_mgr.is_navigation_key(key):
+        elif key in ("j", "down"):
+            mc = self.query_one(MillerColumns)
+            mc.move_cursor_down()
+            event.prevent_default()
+        elif key in ("k", "up"):
+            mc = self.query_one(MillerColumns)
+            mc.move_cursor_up()
             event.prevent_default()
 
     def _update_breadcrumbs(self) -> None:

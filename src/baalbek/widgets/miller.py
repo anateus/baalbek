@@ -72,6 +72,27 @@ class MillerColumns(Widget):
 
         self._update_viewport()
 
+    def _active_command_list(self) -> CommandList | None:
+        for col in reversed(self._columns):
+            if isinstance(col, CommandList) and col.display:
+                return col
+        return None
+
+    def move_cursor_down(self) -> None:
+        cl = self._active_command_list()
+        if cl:
+            cl.action_cursor_down()
+
+    def move_cursor_up(self) -> None:
+        cl = self._active_command_list()
+        if cl:
+            cl.action_cursor_up()
+
+    def select_highlighted(self) -> None:
+        cl = self._active_command_list()
+        if cl and cl.selected_schema:
+            self.select_command(cl.selected_schema.name)
+
     def go_back(self) -> None:
         if not self._path:
             return
