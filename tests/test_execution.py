@@ -31,4 +31,5 @@ async def test_build_command_args():
         assert isinstance(screen, CommanderScreen)
         args = screen.build_command_args()
         assert isinstance(args, list)
-        assert args == ["greet"]
+        assert args[0].endswith("pytest") or args[0].endswith("pytest.exe")
+        assert args[1:] == ["greet"]

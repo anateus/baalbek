@@ -153,5 +153,10 @@ class CommanderScreen(Screen):
         mc.show_output(event.record.raw_output)
 
     def build_command_args(self) -> list[str]:
+        import sys
+
         mc = self.query_one(MillerColumns)
-        return mc.get_command_args()
+        subcommand_args = mc.get_command_args()
+        if not subcommand_args:
+            return []
+        return [sys.argv[0]] + subcommand_args
