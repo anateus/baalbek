@@ -59,6 +59,18 @@ async def test_history_list_renders():
 
 
 @pytest.mark.asyncio
+async def test_history_list_uses_colored_borders_not_checkmarks():
+    async with HistoryListApp(make_records()).run_test() as pilot:
+        hl = pilot.app.query_one(HistoryList)
+        for idx in range(hl.option_count):
+            option = hl.get_option_at_index(idx)
+            label_str = str(option.prompt)
+            assert "\u2713" not in label_str
+            assert "\u2717" not in label_str
+            assert "\u258c" in label_str
+
+
+@pytest.mark.asyncio
 async def test_output_viewer_renders():
     raw = b"\x1b[31mred text\x1b[0m\nnormal text\n"
     async with OutputViewerApp(raw).run_test() as pilot:

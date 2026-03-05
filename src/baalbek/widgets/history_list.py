@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from rich.text import Text
 from textual import on
 from textual.message import Message
 from textual.widgets import OptionList
@@ -21,8 +22,10 @@ class HistoryList(OptionList):
         self._suppress_initial_highlight = True
         options = []
         for rec in records:
-            status = "\u2713" if rec.exit_code == 0 else "\u2717"
-            label = f"{status} {rec.command}"
+            border_color = "green" if rec.exit_code == 0 else "red"
+            label = Text()
+            label.append("\u258c ", style=border_color)
+            label.append(rec.command)
             options.append(Option(label, id=f"run-{rec.id}"))
         super().__init__(*options, **kwargs)
 
