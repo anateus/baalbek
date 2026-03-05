@@ -7,6 +7,7 @@ from textual.screen import Screen
 from textual.widgets import Footer, Static
 
 from baalbek.introspect import introspect_click_app
+from baalbek.screens.quit_confirm import QuitConfirmScreen
 from baalbek.widgets.breadcrumbs import Breadcrumbs
 from baalbek.widgets.miller import MillerColumns
 from baalbek.widgets.parameter_list import ParameterList
@@ -15,10 +16,15 @@ from baalbek.widgets.run_panel import RunPanel
 
 class CommanderScreen(Screen):
     BINDINGS = [
-        Binding("ctrl+r", "run_command", "Run"),
-        Binding("ctrl+h", "toggle_history", "History"),
-        Binding("ctrl+d", "reset_defaults", "Reset"),
-        Binding("escape", "quit", "Quit"),
+        Binding("h,left", "nav_left", "Left", show=True),
+        Binding("l,right,enter", "nav_right", "Right/Select", show=True),
+        Binding("j,down", "cursor_down", "Down", show=False),
+        Binding("k,up", "cursor_up", "Up", show=False),
+        Binding("s", "sort", "Sort", show=True),
+        Binding("ctrl+r", "run_command", "Run", show=True),
+        Binding("ctrl+h", "toggle_history", "History", show=True),
+        Binding("ctrl+d", "reset_defaults", "Reset", show=True),
+        Binding("q", "request_quit", "Quit", show=True),
     ]
 
     def __init__(self, cli: click.BaseCommand, app_name: str | None = None, app_description: str | None = None, **kwargs) -> None:
@@ -39,29 +45,7 @@ class CommanderScreen(Screen):
 
     def on_key(self, event) -> None:
         key = event.key
-
-        if key in ("h", "left"):
-            mc = self.query_one(MillerColumns)
-            mc.move_focus_left()
-            self._update_breadcrumbs()
-            event.prevent_default()
-        elif key in ("l", "right", "enter"):
-            mc = self.query_one(MillerColumns)
-            from baalbek.widgets.history_list import HistoryList
-            from baalbek.widgets.output_viewer import OutputViewer
-            if isinstance(mc.focused_column, OutputViewer):
-                self._zoom_output(mc.focused_column._raw_output)
-            elif isinstance(mc.focused_column, (ParameterList, RunPanel)):
-                mc.select_highlighted()
-            elif isinstance(mc.focused_column, HistoryList):
-                record = mc.focused_column.selected_record
-                if record:
-                    mc.show_output(record.raw_output)
-            else:
-                mc.move_focus_right()
-                self._update_breadcrumbs()
-            event.prevent_default()
-        elif key == "tab":
+        if key == "tab":
             mc = self.query_one(MillerColumns)
             mc.move_focus_right()
             self._update_breadcrumbs()
@@ -71,20 +55,42 @@ class CommanderScreen(Screen):
             mc.move_focus_left()
             self._update_breadcrumbs()
             event.prevent_default()
-        elif key in ("j", "down"):
-            mc = self.query_one(MillerColumns)
-            mc.move_cursor_down()
-            event.prevent_default()
-        elif key in ("k", "up"):
-            mc = self.query_one(MillerColumns)
-            mc.move_cursor_up()
-            event.prevent_default()
-        elif key == "s":
-            self._cycle_sort(reverse=False)
-            event.prevent_default()
         elif key == "S":
             self._cycle_sort(reverse=True)
             event.prevent_default()
+
+    def action_nav_left(self) -> None:
+        mc = self.query_one(MillerColumns)
+        mc.move_focus_left()
+        self._update_breadcrumbs()
+
+    def action_nav_right(self) -> None:
+        from baalbek.widgets.history_list import HistoryList
+        from baalbek.widgets.output_viewer import OutputViewer
+
+        mc = self.query_one(MillerColumns)
+        if isinstance(mc.focused_column, OutputViewer):
+            self._zoom_output(mc.focused_column._raw_output)
+        elif isinstance(mc.focused_column, (ParameterList, RunPanel)):
+            mc.select_highlighted()
+        elif isinstance(mc.focused_column, HistoryList):
+            record = mc.focused_column.selected_record
+            if record:
+                mc.show_output(record.raw_output)
+        else:
+            mc.move_focus_right()
+            self._update_breadcrumbs()
+
+    def action_cursor_down(self) -> None:
+        mc = self.query_one(MillerColumns)
+        mc.move_cursor_down()
+
+    def action_cursor_up(self) -> None:
+        mc = self.query_one(MillerColumns)
+        mc.move_cursor_up()
+
+    def action_sort(self) -> None:
+        self._cycle_sort(reverse=False)
 
     def _update_breadcrumbs(self) -> None:
         mc = self.query_one(MillerColumns)
@@ -127,6 +133,13 @@ class CommanderScreen(Screen):
 
     def action_quit(self) -> None:
         self.app.exit()
+
+    def action_request_quit(self) -> None:
+        self.app.push_screen(QuitConfirmScreen(), callback=self._on_quit_confirm)
+
+    def _on_quit_confirm(self, confirmed: bool) -> None:
+        if confirmed:
+            self.app.exit()
 
     def action_run_command(self) -> None:
         import json

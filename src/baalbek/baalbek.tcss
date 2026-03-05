@@ -87,3 +87,27 @@ ParameterFormModal {
     border: thick $primary;
     background: $surface;
 }
+
+QuitConfirmScreen {
+    align: center middle;
+}
+
+#quit-dialog {
+    width: 30;
+    height: auto;
+    border: thick $primary;
+    background: $surface;
+    padding: 1 2;
+}
+
+#quit-title {
+    text-align: center;
+    text-style: bold;
+    width: 100%;
+}
+
+#quit-options {
+    text-align: center;
+    width: 100%;
+    margin-top: 1;
+}

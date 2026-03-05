@@ -95,3 +95,23 @@ async def test_default_sort_is_frequency_on_mount():
         mc = pilot.app.screen.query_one(MillerColumns)
         assert mc.sort_mode == SortMode.FREQUENCY
         assert mc.sort_reversed is False
+
+
+@pytest.mark.asyncio
+async def test_q_shows_quit_confirmation():
+    async with CommanderApp().run_test() as pilot:
+        await pilot.pause()
+        assert isinstance(pilot.app.screen, CommanderScreen)
+        await pilot.press("q")
+        await pilot.pause()
+        assert not isinstance(pilot.app.screen, CommanderScreen)
+
+
+@pytest.mark.asyncio
+async def test_escape_does_not_quit():
+    async with CommanderApp().run_test() as pilot:
+        await pilot.pause()
+        assert isinstance(pilot.app.screen, CommanderScreen)
+        await pilot.press("escape")
+        await pilot.pause()
+        assert isinstance(pilot.app.screen, CommanderScreen)
