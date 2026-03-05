@@ -7,6 +7,7 @@ from textual.message import Message
 from textual.widgets import OptionList
 from textual.widgets.option_list import Option
 
+from baalbek.db import HistoryDB
 from baalbek.schemas import CommandSchema
 from baalbek.widgets.option_form import _default_str
 
@@ -25,6 +26,25 @@ class ParameterList(OptionList):
         self._values: dict[str, Any] = {}
         options = self._build_options(schema)
         super().__init__(*options, **kwargs)
+
+    @property
+    def _command_path(self) -> str:
+        return "/".join(s.name for s in self._schema.path_from_root)
+
+    def on_mount(self) -> None:
+        if self.has_class("preview"):
+            return
+        db_path = getattr(self.app, "_db_path", None)
+        if db_path is None:
+            return
+        db = HistoryDB(db_path)
+        try:
+            saved = db.load_draft(self._command_path)
+        finally:
+            db.close()
+        if saved:
+            self._values = saved
+            self._rebuild_display()
 
     def _build_options(self, schema: CommandSchema) -> list[Option]:
         options: list[Option] = []
@@ -78,6 +98,29 @@ class ParameterList(OptionList):
             return
         self._values = values
         self._rebuild_display()
+        self._save_draft()
+
+    def _save_draft(self) -> None:
+        db_path = getattr(self.app, "_db_path", None)
+        if db_path is None:
+            return
+        db = HistoryDB(db_path)
+        try:
+            db.save_draft(self._command_path, self._values)
+        finally:
+            db.close()
+
+    def reset_to_defaults(self) -> None:
+        self._values = {}
+        self._rebuild_display()
+        db_path = getattr(self.app, "_db_path", None)
+        if db_path is None:
+            return
+        db = HistoryDB(db_path)
+        try:
+            db.delete_draft(self._command_path)
+        finally:
+            db.close()
 
     def _rebuild_display(self) -> None:
         self.clear_options()

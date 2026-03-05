@@ -47,3 +47,34 @@ def test_list_runs_with_limit(tmp_path: Path) -> None:
     runs = db.list_runs(limit=3)
     assert len(runs) == 3
     db.close()
+
+
+def test_save_and_load_draft(tmp_path: Path) -> None:
+    db = HistoryDB(tmp_path / "history.db")
+    db.save_draft("cli/deploy", {"name": "myapp", "replicas": 3})
+    result = db.load_draft("cli/deploy")
+    assert result == {"name": "myapp", "replicas": 3}
+    db.close()
+
+
+def test_save_draft_upsert(tmp_path: Path) -> None:
+    db = HistoryDB(tmp_path / "history.db")
+    db.save_draft("cli/deploy", {"name": "v1"})
+    db.save_draft("cli/deploy", {"name": "v2"})
+    result = db.load_draft("cli/deploy")
+    assert result == {"name": "v2"}
+    db.close()
+
+
+def test_load_draft_missing(tmp_path: Path) -> None:
+    db = HistoryDB(tmp_path / "history.db")
+    assert db.load_draft("nonexistent") is None
+    db.close()
+
+
+def test_delete_draft(tmp_path: Path) -> None:
+    db = HistoryDB(tmp_path / "history.db")
+    db.save_draft("cli/deploy", {"name": "myapp"})
+    db.delete_draft("cli/deploy")
+    assert db.load_draft("cli/deploy") is None
+    db.close()

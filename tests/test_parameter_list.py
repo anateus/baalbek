@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from textual.app import App, ComposeResult
 
+from baalbek.db import HistoryDB
 from baalbek.schemas import ArgumentSchema, CommandSchema, OptionSchema
 from baalbek.widgets.parameter_list import ParameterList
 
@@ -60,12 +63,18 @@ def _sample_schema() -> CommandSchema:
 
 
 class ParameterListApp(App):
-    def __init__(self, schema: CommandSchema) -> None:
+    def __init__(self, schema: CommandSchema, db_path: Path | None = None, preview: bool = False) -> None:
         super().__init__()
         self._schema = schema
+        if db_path is not None:
+            self._db_path = db_path
+        self._preview = preview
 
     def compose(self) -> ComposeResult:
-        yield ParameterList(self._schema)
+        pl = ParameterList(self._schema)
+        if self._preview:
+            pl.add_class("preview")
+        yield pl
 
 
 @pytest.mark.asyncio
@@ -101,3 +110,57 @@ async def test_modal_updates_values():
         pl._on_modal_done({"name": "myapp", "replicas": "3", "verbose": True})
         assert pl.get_values() == {"name": "myapp", "replicas": "3", "verbose": True}
         assert pl.option_count == 3
+
+
+@pytest.mark.asyncio
+async def test_loads_saved_draft_on_mount(tmp_path: Path):
+    db_path = tmp_path / "history.db"
+    db = HistoryDB(db_path)
+    db.save_draft("deploy", {"name": "saved-app", "replicas": "5"})
+    db.close()
+    app = ParameterListApp(_sample_schema(), db_path=db_path)
+    async with app.run_test() as pilot:
+        pl = pilot.app.query_one(ParameterList)
+        assert pl.get_values() == {"name": "saved-app", "replicas": "5"}
+
+
+@pytest.mark.asyncio
+async def test_saves_draft_on_modal_done(tmp_path: Path):
+    db_path = tmp_path / "history.db"
+    app = ParameterListApp(_sample_schema(), db_path=db_path)
+    async with app.run_test() as pilot:
+        pl = pilot.app.query_one(ParameterList)
+        pl._on_modal_done({"name": "myapp", "replicas": "3"})
+    db = HistoryDB(db_path)
+    result = db.load_draft("deploy")
+    db.close()
+    assert result == {"name": "myapp", "replicas": "3"}
+
+
+@pytest.mark.asyncio
+async def test_preview_does_not_load_draft(tmp_path: Path):
+    db_path = tmp_path / "history.db"
+    db = HistoryDB(db_path)
+    db.save_draft("deploy", {"name": "should-not-load"})
+    db.close()
+    app = ParameterListApp(_sample_schema(), db_path=db_path, preview=True)
+    async with app.run_test() as pilot:
+        pl = pilot.app.query_one(ParameterList)
+        assert pl.get_values() == {}
+
+
+@pytest.mark.asyncio
+async def test_reset_clears_values_and_draft(tmp_path: Path):
+    db_path = tmp_path / "history.db"
+    db = HistoryDB(db_path)
+    db.save_draft("deploy", {"name": "myapp"})
+    db.close()
+    app = ParameterListApp(_sample_schema(), db_path=db_path)
+    async with app.run_test() as pilot:
+        pl = pilot.app.query_one(ParameterList)
+        assert pl.get_values() == {"name": "myapp"}
+        pl.reset_to_defaults()
+        assert pl.get_values() == {}
+    db = HistoryDB(db_path)
+    assert db.load_draft("deploy") is None
+    db.close()

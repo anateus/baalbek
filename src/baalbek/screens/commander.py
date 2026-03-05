@@ -16,6 +16,7 @@ class CommanderScreen(Screen):
     BINDINGS = [
         Binding("ctrl+r", "run_command", "Run"),
         Binding("ctrl+h", "toggle_history", "History"),
+        Binding("ctrl+d", "reset_defaults", "Reset"),
         Binding("escape", "quit", "Quit"),
     ]
 
@@ -121,6 +122,12 @@ class CommanderScreen(Screen):
         finally:
             db.close()
         mc.show_history(records)
+
+    def action_reset_defaults(self) -> None:
+        mc = self.query_one(MillerColumns)
+        col = mc.focused_column
+        if isinstance(col, ParameterList):
+            col.reset_to_defaults()
 
     def on_miller_columns_command_selected(self, event: MillerColumns.CommandSelected) -> None:
         from baalbek.db import HistoryDB
