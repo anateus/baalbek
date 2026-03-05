@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from textual.app import App, ComposeResult
-from textual.widgets import Button
+from textual.widgets import Static
 
 from baalbek.schemas import ArgumentSchema, CommandSchema
 from baalbek.widgets.run_panel import RunPanel
@@ -41,7 +41,7 @@ class RunPanelApp(App):
 async def test_run_panel_has_button():
     async with RunPanelApp(make_leaf_command()).run_test() as pilot:
         await pilot.pause()
-        btn = pilot.app.query_one("#run-button", Button)
+        btn = pilot.app.query_one("#run-button", Static)
         assert btn is not None
 
 
@@ -49,16 +49,16 @@ async def test_run_panel_has_button():
 async def test_run_button_disabled_when_required_arg_missing():
     async with RunPanelApp(make_leaf_command(required_arg=True)).run_test() as pilot:
         await pilot.pause()
-        btn = pilot.app.query_one("#run-button", Button)
-        assert btn.disabled is True
+        btn = pilot.app.query_one("#run-button", Static)
+        assert btn.has_class("disabled")
 
 
 @pytest.mark.asyncio
 async def test_run_button_enabled_when_no_required_args():
     async with RunPanelApp(make_leaf_command(required_arg=False)).run_test() as pilot:
         await pilot.pause()
-        btn = pilot.app.query_one("#run-button", Button)
-        assert btn.disabled is False
+        btn = pilot.app.query_one("#run-button", Static)
+        assert not btn.has_class("disabled")
 
 
 @pytest.mark.asyncio
@@ -67,14 +67,14 @@ async def test_run_button_enables_after_filling_required_arg():
     async with RunPanelApp(schema).run_test() as pilot:
         await pilot.pause()
         panel = pilot.app.query_one(RunPanel)
-        btn = pilot.app.query_one("#run-button", Button)
-        assert btn.disabled is True
+        btn = pilot.app.query_one("#run-button", Static)
+        assert btn.has_class("disabled")
         panel.parameter_list._values["target"] = "prod"
         panel.parameter_list._rebuild_display()
         await pilot.pause()
         panel._update_button_state()
         await pilot.pause()
-        assert btn.disabled is False
+        assert not btn.has_class("disabled")
 
 
 @pytest.mark.asyncio

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from rich.text import Text
+from rich.table import Table
 from textual import on
 from textual.message import Message
 from textual.widgets import OptionList
@@ -23,10 +23,11 @@ class HistoryList(OptionList):
         options = []
         for rec in records:
             border_color = "green" if rec.exit_code == 0 else "red"
-            label = Text()
-            label.append("\u258c ", style=border_color)
-            label.append(rec.command)
-            options.append(Option(label, id=f"run-{rec.id}"))
+            table = Table(show_header=False, box=None, padding=(0, 0), show_edge=False, expand=True)
+            table.add_column(width=1, style=border_color, no_wrap=True)
+            table.add_column(ratio=1)
+            table.add_row("\u258c", rec.command)
+            options.append(Option(table, id=f"run-{rec.id}"))
         super().__init__(*options, **kwargs)
 
     @property

@@ -3,7 +3,7 @@ from __future__ import annotations
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.message import Message
-from textual.widgets import Button
+from textual.widgets import Static
 
 from baalbek.schemas import CommandSchema
 from baalbek.widgets.parameter_list import ParameterList
@@ -17,9 +17,13 @@ class RunPanel(Vertical):
         super().__init__(**kwargs)
         self._schema = schema
         self._button_highlighted = False
+        self._button_disabled = self._has_unfilled_required()
 
     def compose(self) -> ComposeResult:
-        yield Button("Run", id="run-button", variant="success", disabled=self._has_unfilled_required())
+        btn = Static("▶ Run command", id="run-button")
+        if self._button_disabled:
+            btn.add_class("disabled")
+        yield btn
         pl = ParameterList(self._schema)
         if self.has_class("preview"):
             pl.add_class("preview")
@@ -40,7 +44,7 @@ class RunPanel(Vertical):
         return self._button_highlighted
 
     def _update_button_visual(self) -> None:
-        btn = self.query_one("#run-button", Button)
+        btn = self.query_one("#run-button", Static)
         if self._button_highlighted:
             btn.add_class("highlighted")
         else:
@@ -80,14 +84,13 @@ class RunPanel(Vertical):
 
     def open_edit_or_run(self) -> None:
         if self._button_highlighted:
-            btn = self.query_one("#run-button", Button)
-            if not btn.disabled:
+            if not self._button_disabled:
                 self.post_message(self.RunRequested())
         else:
             self.parameter_list.open_edit_for_highlighted()
 
     def _update_button_state(self) -> None:
-        btn = self.query_one("#run-button", Button)
+        btn = self.query_one("#run-button", Static)
         values = self.parameter_list.get_values()
         has_unfilled = False
         for arg in self._schema.arguments:
@@ -96,11 +99,15 @@ class RunPanel(Vertical):
                 if not val or val == "":
                     has_unfilled = True
                     break
-        btn.disabled = has_unfilled
+        self._button_disabled = has_unfilled
+        if has_unfilled:
+            btn.add_class("disabled")
+        else:
+            btn.remove_class("disabled")
 
     def on_parameter_list_values_changed(self, event) -> None:
         self._update_button_state()
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "run-button":
+    def on_click(self, event) -> None:
+        if self.query_one("#run-button", Static).is_mouse_over and not self._button_disabled:
             self.post_message(self.RunRequested())
