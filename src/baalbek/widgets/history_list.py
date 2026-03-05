@@ -9,6 +9,8 @@ from baalbek.db import RunRecord
 
 
 class HistoryList(OptionList):
+    can_focus = False
+
     class Selected(Message):
         def __init__(self, record: RunRecord) -> None:
             super().__init__()
@@ -16,6 +18,7 @@ class HistoryList(OptionList):
 
     def __init__(self, records: list[RunRecord], **kwargs) -> None:
         self._records = records
+        self._suppress_initial_highlight = True
         options = []
         for rec in records:
             status = "\u2713" if rec.exit_code == 0 else "\u2717"
@@ -32,6 +35,9 @@ class HistoryList(OptionList):
 
     @on(OptionList.OptionHighlighted)
     def _on_highlight(self, event: OptionList.OptionHighlighted) -> None:
+        if self._suppress_initial_highlight:
+            self._suppress_initial_highlight = False
+            return
         record = self.selected_record
         if record:
             self.post_message(self.Selected(record))

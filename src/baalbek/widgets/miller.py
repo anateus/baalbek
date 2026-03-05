@@ -186,13 +186,17 @@ class MillerColumns(Widget):
         return True
 
     def move_cursor_down(self) -> None:
+        from baalbek.widgets.history_list import HistoryList
+
         focused = self.focused_column
-        if isinstance(focused, (CommandList, ParameterList)):
+        if isinstance(focused, (CommandList, ParameterList, HistoryList)):
             focused.action_cursor_down()
 
     def move_cursor_up(self) -> None:
+        from baalbek.widgets.history_list import HistoryList
+
         focused = self.focused_column
-        if isinstance(focused, (CommandList, ParameterList)):
+        if isinstance(focused, (CommandList, ParameterList, HistoryList)):
             focused.action_cursor_up()
 
     def select_highlighted(self) -> None:
@@ -277,6 +281,7 @@ class MillerColumns(Widget):
         viewport = self.query_one("#miller-viewport")
         viewport.mount(history)
         self._update_viewport()
+        self._update_focus_styles()
 
     def show_output(self, raw_output: bytes) -> None:
         from baalbek.widgets.output_viewer import OutputViewer

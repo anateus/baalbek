@@ -46,11 +46,16 @@ class CommanderScreen(Screen):
             event.prevent_default()
         elif key in ("l", "right", "enter"):
             mc = self.query_one(MillerColumns)
+            from baalbek.widgets.history_list import HistoryList
             from baalbek.widgets.output_viewer import OutputViewer
             if isinstance(mc.focused_column, OutputViewer):
                 self._zoom_output(mc.focused_column._raw_output)
             elif isinstance(mc.focused_column, ParameterList):
                 mc.select_highlighted()
+            elif isinstance(mc.focused_column, HistoryList):
+                record = mc.focused_column.selected_record
+                if record:
+                    mc.show_output(record.raw_output)
             else:
                 mc.move_focus_right()
                 self._update_breadcrumbs()
