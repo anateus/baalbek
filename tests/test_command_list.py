@@ -58,3 +58,42 @@ async def test_selected_command():
         cl = pilot.app.query_one(CommandList)
         await pilot.pause()
         assert cl.selected_schema is not None
+
+
+@pytest.mark.asyncio
+async def test_resort_reorders_options():
+    commands = make_commands()
+    async with CommandListApp(commands).run_test() as pilot:
+        cl = pilot.app.query_one(CommandList)
+        original_labels = cl.get_labels()
+        cl.resort(["logs", "deploy"])
+        new_labels = cl.get_labels()
+        assert new_labels[0].startswith("logs")
+        assert new_labels[1].startswith("deploy")
+        assert new_labels != original_labels
+
+
+@pytest.mark.asyncio
+async def test_resort_preserves_highlight():
+    commands = make_commands()
+    async with CommandListApp(commands).run_test() as pilot:
+        cl = pilot.app.query_one(CommandList)
+        await pilot.pause()
+        highlighted_before = cl.selected_schema
+        assert highlighted_before is not None
+        old_name = highlighted_before.name
+        cl.resort(["logs", "deploy"])
+        highlighted_after = cl.selected_schema
+        assert highlighted_after is not None
+        assert highlighted_after.name == old_name
+
+
+@pytest.mark.asyncio
+async def test_resort_with_unknown_names_puts_them_last():
+    commands = make_commands()
+    async with CommandListApp(commands).run_test() as pilot:
+        cl = pilot.app.query_one(CommandList)
+        cl.resort(["logs"])
+        labels = cl.get_labels()
+        assert labels[0].startswith("logs")
+        assert len(labels) == 2
