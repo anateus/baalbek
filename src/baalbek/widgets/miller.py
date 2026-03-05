@@ -17,8 +17,6 @@ class MillerColumns(Widget):
             super().__init__()
             self.schema = schema
 
-    MAX_VISIBLE = 3
-
     def __init__(self, commands: dict[str, CommandSchema], **kwargs) -> None:
         super().__init__(**kwargs)
         self._root_commands = commands
@@ -350,14 +348,8 @@ class MillerColumns(Widget):
             col.remove()
 
     def _update_viewport(self) -> None:
-        columns = self._columns
-        n = len(columns)
-        if n <= self.MAX_VISIBLE:
-            for col in columns:
-                col.display = True
-            return
-        start = min(self._focus_index, n - self.MAX_VISIBLE)
-        start = max(0, start)
-        end = start + self.MAX_VISIBLE
-        for i, col in enumerate(columns):
-            col.display = start <= i < end
+        for col in self._columns:
+            col.display = True
+        focused = self.focused_column
+        if focused is not None:
+            focused.scroll_visible()

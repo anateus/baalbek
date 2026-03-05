@@ -194,3 +194,46 @@ async def test_miller_apply_sort_frequency_reversed():
         assert isinstance(first_col, CommandList)
         labels = first_col.get_labels()
         assert labels[0].startswith("deploy")
+
+
+def make_deep_commands() -> dict[str, CommandSchema]:
+    leaf = CommandSchema(
+        name="leaf", docstring="A leaf command", options=[], arguments=[],
+    )
+    mid = CommandSchema(
+        name="mid",
+        docstring="Mid group",
+        options=[],
+        arguments=[],
+        subcommands={"leaf": leaf},
+        is_group=True,
+    )
+    top = CommandSchema(
+        name="top",
+        docstring="Top group",
+        options=[],
+        arguments=[],
+        subcommands={"mid": mid},
+        is_group=True,
+    )
+    other = CommandSchema(
+        name="other", docstring="Other command", options=[], arguments=[],
+    )
+    return {"top": top, "other": other}
+
+
+@pytest.mark.asyncio
+async def test_all_columns_visible_when_they_fit():
+    async with MillerApp(make_deep_commands()).run_test(size=(200, 40)) as pilot:
+        mc = pilot.app.query_one(MillerColumns)
+        await pilot.pause()
+        mc.select_command("top")
+        await pilot.pause()
+        mc.select_command("mid")
+        await pilot.pause()
+        mc.select_command("leaf")
+        await pilot.pause()
+        all_cols = mc._columns
+        visible = [c for c in all_cols if c.display]
+        assert len(all_cols) > 3
+        assert len(visible) == len(all_cols)

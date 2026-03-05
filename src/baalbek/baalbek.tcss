@@ -4,6 +4,7 @@ MillerColumns {
 
 #miller-viewport {
     height: 1fr;
+    overflow-x: auto;
 }
 
 #app-title {
