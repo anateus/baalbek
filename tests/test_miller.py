@@ -102,10 +102,10 @@ async def test_navigate_back():
         await pilot.pause()
         mc.select_command("deploy")
         await pilot.pause()
-        count_after_select = mc.column_count
+        committed_after_select = len(mc._committed)
         mc.go_back()
         await pilot.pause()
-        assert mc.column_count < count_after_select
+        assert len(mc._committed) < committed_after_select
 
 
 @pytest.mark.asyncio
@@ -237,6 +237,43 @@ async def test_all_columns_visible_when_they_fit():
         visible = [c for c in all_cols if c.display]
         assert len(all_cols) > 3
         assert len(visible) == len(all_cols)
+
+
+def make_deep_commands() -> dict[str, CommandSchema]:
+    leaf = CommandSchema(
+        name="leaf", docstring="A leaf", options=[], arguments=[],
+    )
+    mid = CommandSchema(
+        name="mid",
+        docstring="Middle group",
+        options=[],
+        arguments=[],
+        subcommands={"leaf": leaf},
+        is_group=True,
+    )
+    top = CommandSchema(
+        name="top",
+        docstring="Top group",
+        options=[],
+        arguments=[],
+        subcommands={"mid": mid},
+        is_group=True,
+    )
+    flat = CommandSchema(
+        name="flat", docstring="Flat cmd", options=[], arguments=[],
+    )
+    return {"top": top, "flat": flat}
+
+
+@pytest.mark.asyncio
+async def test_preview_unfurls_recursively():
+    async with MillerApp(make_deep_commands()).run_test(size=(200, 40)) as pilot:
+        mc = pilot.app.query_one(MillerColumns)
+        await pilot.pause()
+        mc.move_cursor_down()
+        await pilot.pause()
+        preview_cols = mc._preview
+        assert len(preview_cols) >= 3
 
 
 @pytest.mark.asyncio

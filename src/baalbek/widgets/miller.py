@@ -134,7 +134,11 @@ class MillerColumns(Widget):
         if not self._committed or not isinstance(self._committed[-1], CommandList):
             return
         last_cmd_list = self._committed[-1]
-        schema = last_cmd_list.selected_schema
+        self._build_preview_chain(last_cmd_list)
+        self._update_viewport()
+
+    def _build_preview_chain(self, cmd_list: CommandList) -> None:
+        schema = cmd_list.selected_schema
         if not schema:
             return
 
@@ -150,12 +154,12 @@ class MillerColumns(Widget):
             self._preview.append(child_list)
             viewport.mount(child_list)
             self._sort_command_list(child_list)
+            self._build_preview_chain(child_list)
         else:
             form = ParameterList(schema)
             form.add_class("preview")
             self._preview.append(form)
             viewport.mount(form)
-        self._update_viewport()
 
     def _clear_preview(self) -> None:
         for col in self._preview:
