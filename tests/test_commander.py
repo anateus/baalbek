@@ -84,3 +84,14 @@ async def test_shift_s_key_cycles_sort_reversed():
         await pilot.press("S")
         assert mc.sort_mode == SortMode.ALPHA
         assert mc.sort_reversed is True
+
+
+@pytest.mark.asyncio
+async def test_default_sort_is_frequency_on_mount():
+    from baalbek.db import SortMode
+
+    async with CommanderApp().run_test() as pilot:
+        await pilot.pause()
+        mc = pilot.app.screen.query_one(MillerColumns)
+        assert mc.sort_mode == SortMode.FREQUENCY
+        assert mc.sort_reversed is False

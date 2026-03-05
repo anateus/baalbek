@@ -89,24 +89,38 @@ class CommanderScreen(Screen):
         mc = self.query_one(MillerColumns)
         self.query_one(Breadcrumbs).path = mc.current_path
 
+    def on_mount(self) -> None:
+        self._apply_frequency_sort()
+
+    def _get_frequency_scores(self) -> dict[str, float]:
+        from baalbek.db import HistoryDB, compute_frequency_scores
+
+        try:
+            db = HistoryDB(self.app._db_path)
+            try:
+                runs = db.recent_command_data(days=7)
+            finally:
+                db.close()
+            return compute_frequency_scores(runs, set(self._commands.keys()))
+        except AttributeError:
+            return {}
+
+    def _apply_frequency_sort(self) -> None:
+        from baalbek.db import SortMode
+
+        mc = self.query_one(MillerColumns)
+        frequency_scores = self._get_frequency_scores()
+        mc.apply_sort(SortMode.FREQUENCY, False, frequency_scores)
+
     def _cycle_sort(self, reverse: bool) -> None:
-        from baalbek.db import HistoryDB, SortMode, compute_frequency_scores
+        from baalbek.db import SortMode
 
         mc = self.query_one(MillerColumns)
         mc.cycle_sort(reverse=reverse)
 
         frequency_scores: dict[str, float] = {}
         if mc.sort_mode == SortMode.FREQUENCY:
-            try:
-                db = HistoryDB(self.app._db_path)
-                try:
-                    runs = db.recent_command_data(days=7)
-                finally:
-                    db.close()
-                all_command_names = set(self._commands.keys())
-                frequency_scores = compute_frequency_scores(runs, all_command_names)
-            except AttributeError:
-                pass
+            frequency_scores = self._get_frequency_scores()
 
         mc.apply_sort(mc.sort_mode, mc.sort_reversed, frequency_scores)
 
