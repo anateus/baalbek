@@ -1,6 +1,7 @@
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from baalbek.db import HistoryDB
+from baalbek.db import HistoryDB, SortMode, compute_frequency_scores
 
 
 def test_create_db(tmp_path: Path) -> None:
@@ -78,3 +79,65 @@ def test_delete_draft(tmp_path: Path) -> None:
     db.delete_draft("cli/deploy")
     assert db.load_draft("cli/deploy") is None
     db.close()
+
+
+def test_recent_command_data(tmp_path):
+    db = HistoryDB(tmp_path / "history.db")
+    db.insert_run("deploy web", '["script", "deploy", "web"]', 0, None, None)
+    db.insert_run("logs tail", '["script", "logs", "tail"]', 0, None, None)
+    rows = db.recent_command_data(days=7)
+    assert len(rows) == 2
+    assert rows[0][0] in ("deploy web", "logs tail")
+    db.close()
+
+
+def test_recent_command_data_excludes_old(tmp_path):
+    db = HistoryDB(tmp_path / "history.db")
+    db.insert_run("deploy web", '["script", "deploy"]', 0, None, None)
+    old_time = (datetime.now(timezone.utc) - timedelta(days=10)).isoformat()
+    db._conn.execute(
+        "INSERT INTO runs (command, args_json, exit_code, started_at) VALUES (?, ?, ?, ?)",
+        ("old cmd", '["script", "old"]', 0, old_time),
+    )
+    db._conn.commit()
+    rows = db.recent_command_data(days=7)
+    assert len(rows) == 1
+    assert rows[0][0] == "deploy web"
+    db.close()
+
+
+def test_compute_frequency_scores_basic():
+    now = datetime.now(timezone.utc)
+    runs = [
+        ("deploy web", now.isoformat()),
+        ("deploy api", now.isoformat()),
+        ("deploy web", now.isoformat()),
+        ("logs tail", now.isoformat()),
+    ]
+    scores = compute_frequency_scores(runs, {"deploy", "logs"})
+    assert scores["deploy"] > scores["logs"]
+
+
+def test_compute_frequency_scores_recency_weighting():
+    now = datetime.now(timezone.utc)
+    old = (now - timedelta(days=6)).isoformat()
+    runs = [
+        ("deploy web", old),
+        ("deploy web", old),
+        ("deploy web", old),
+        ("logs tail", now.isoformat()),
+    ]
+    scores = compute_frequency_scores(runs, {"deploy", "logs"})
+    assert scores["logs"] > scores["deploy"]
+
+
+def test_compute_frequency_scores_unknown_commands_ignored():
+    now = datetime.now(timezone.utc)
+    runs = [("unknown cmd", now.isoformat())]
+    scores = compute_frequency_scores(runs, {"deploy", "logs"})
+    assert scores == {}
+
+
+def test_sort_mode_enum():
+    assert SortMode.FREQUENCY.value == "frequency"
+    assert SortMode.ALPHA.value == "alpha"

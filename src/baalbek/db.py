@@ -1,10 +1,17 @@
 from __future__ import annotations
 
+import enum
 import json
 import sqlite3
+from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+
+class SortMode(enum.Enum):
+    FREQUENCY = "frequency"
+    ALPHA = "alpha"
 
 
 @dataclass
@@ -105,5 +112,30 @@ class HistoryDB:
         )
         self._conn.commit()
 
+    def recent_command_data(self, days: int = 7) -> list[tuple[str, str]]:
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        cur = self._conn.execute(
+            "SELECT command, started_at FROM runs WHERE started_at >= ? ORDER BY started_at DESC",
+            (cutoff,),
+        )
+        return cur.fetchall()
+
     def close(self) -> None:
         self._conn.close()
+
+
+def compute_frequency_scores(
+    runs: list[tuple[str, str]], target_names: set[str]
+) -> dict[str, float]:
+    scores: dict[str, float] = defaultdict(float)
+    now = datetime.now(timezone.utc)
+    for command_str, started_at in runs:
+        dt = datetime.fromisoformat(started_at)
+        age_days = (now - dt).total_seconds() / 86400
+        weight = 2 ** (-age_days)
+        words = command_str.split()
+        for word in words:
+            if word in target_names:
+                scores[word] += weight
+                break
+    return dict(scores)
