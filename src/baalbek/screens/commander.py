@@ -60,6 +60,16 @@ class CommanderScreen(Screen):
                 mc.move_focus_right()
                 self._update_breadcrumbs()
             event.prevent_default()
+        elif key == "tab":
+            mc = self.query_one(MillerColumns)
+            mc.move_focus_right()
+            self._update_breadcrumbs()
+            event.prevent_default()
+        elif key == "shift+tab":
+            mc = self.query_one(MillerColumns)
+            mc.move_focus_left()
+            self._update_breadcrumbs()
+            event.prevent_default()
         elif key in ("j", "down"):
             mc = self.query_one(MillerColumns)
             mc.move_cursor_down()
