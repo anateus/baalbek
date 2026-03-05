@@ -3,7 +3,9 @@ from __future__ import annotations
 import pytest
 from textual.app import App, ComposeResult
 
+from baalbek.db import SortMode
 from baalbek.schemas import CommandSchema, OptionSchema
+from baalbek.widgets.command_list import CommandList
 from baalbek.widgets.miller import MillerColumns
 
 
@@ -125,3 +127,70 @@ async def test_breadcrumbs_update():
         mc.select_command("deploy")
         await pilot.pause()
         assert mc.current_path == ["deploy"]
+
+
+@pytest.mark.asyncio
+async def test_miller_default_sort_mode():
+    async with MillerApp(make_commands()).run_test() as pilot:
+        mc = pilot.app.query_one(MillerColumns)
+        assert mc.sort_mode == SortMode.FREQUENCY
+        assert mc.sort_reversed is False
+
+
+@pytest.mark.asyncio
+async def test_miller_cycle_sort_forward():
+    async with MillerApp(make_commands()).run_test() as pilot:
+        mc = pilot.app.query_one(MillerColumns)
+        mc.cycle_sort(reverse=False)
+        assert mc.sort_mode == SortMode.ALPHA
+        assert mc.sort_reversed is False
+        mc.cycle_sort(reverse=False)
+        assert mc.sort_mode == SortMode.FREQUENCY
+
+
+@pytest.mark.asyncio
+async def test_miller_cycle_sort_reverse():
+    async with MillerApp(make_commands()).run_test() as pilot:
+        mc = pilot.app.query_one(MillerColumns)
+        mc.cycle_sort(reverse=True)
+        assert mc.sort_mode == SortMode.ALPHA
+        assert mc.sort_reversed is True
+
+
+@pytest.mark.asyncio
+async def test_miller_apply_sort_alpha():
+    async with MillerApp(make_commands()).run_test() as pilot:
+        mc = pilot.app.query_one(MillerColumns)
+        await pilot.pause()
+        mc.apply_sort(SortMode.ALPHA, False, {})
+        first_col = mc._committed[0]
+        assert isinstance(first_col, CommandList)
+        labels = first_col.get_labels()
+        plain = [l.replace(" \u25b8", "") for l in labels]
+        assert plain == sorted(plain)
+
+
+@pytest.mark.asyncio
+async def test_miller_apply_sort_frequency():
+    async with MillerApp(make_commands()).run_test() as pilot:
+        mc = pilot.app.query_one(MillerColumns)
+        await pilot.pause()
+        scores = {"logs": 10.0, "deploy": 1.0}
+        mc.apply_sort(SortMode.FREQUENCY, False, scores)
+        first_col = mc._committed[0]
+        assert isinstance(first_col, CommandList)
+        labels = first_col.get_labels()
+        assert labels[0].startswith("logs")
+
+
+@pytest.mark.asyncio
+async def test_miller_apply_sort_frequency_reversed():
+    async with MillerApp(make_commands()).run_test() as pilot:
+        mc = pilot.app.query_one(MillerColumns)
+        await pilot.pause()
+        scores = {"logs": 10.0, "deploy": 1.0}
+        mc.apply_sort(SortMode.FREQUENCY, True, scores)
+        first_col = mc._committed[0]
+        assert isinstance(first_col, CommandList)
+        labels = first_col.get_labels()
+        assert labels[0].startswith("deploy")

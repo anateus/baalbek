@@ -5,6 +5,7 @@ from textual.containers import Horizontal
 from textual.message import Message
 from textual.widget import Widget
 
+from baalbek.db import SortMode
 from baalbek.schemas import CommandSchema
 from baalbek.widgets.command_list import CommandList
 from baalbek.widgets.parameter_list import ParameterList
@@ -26,6 +27,9 @@ class MillerColumns(Widget):
         self._preview: list[Widget] = []
         self._path: list[str] = []
         self._focus_index: int = 0
+        self._sort_mode: SortMode = SortMode.FREQUENCY
+        self._sort_reversed: bool = False
+        self._frequency_scores: dict[str, float] = {}
 
     @property
     def _columns(self) -> list[Widget]:
@@ -40,6 +44,7 @@ class MillerColumns(Widget):
         self._schemas_at_depth.append(self._root_commands)
         viewport = self.query_one("#miller-viewport")
         viewport.mount(col)
+        self._sort_command_list(col)
         self._focus_index = 0
         self._update_focus_styles()
         self._sync_preview()
@@ -51,6 +56,40 @@ class MillerColumns(Widget):
     @property
     def current_path(self) -> list[str]:
         return list(self._path)
+
+    @property
+    def sort_mode(self) -> SortMode:
+        return self._sort_mode
+
+    @property
+    def sort_reversed(self) -> bool:
+        return self._sort_reversed
+
+    def cycle_sort(self, reverse: bool = False) -> None:
+        modes = list(SortMode)
+        idx = modes.index(self._sort_mode)
+        self._sort_mode = modes[(idx + 1) % len(modes)]
+        self._sort_reversed = reverse
+
+    def apply_sort(self, mode: SortMode, reversed_: bool, frequency_scores: dict[str, float]) -> None:
+        self._sort_mode = mode
+        self._sort_reversed = reversed_
+        self._frequency_scores = frequency_scores
+        for col in self._committed:
+            if isinstance(col, CommandList):
+                self._sort_command_list(col)
+
+    def _sort_command_list(self, col: CommandList) -> None:
+        names = list(col._commands.keys())
+        if self._sort_mode == SortMode.ALPHA:
+            ordered = sorted(names, reverse=self._sort_reversed)
+        else:
+            ordered = sorted(
+                names,
+                key=lambda n: self._frequency_scores.get(n, 0.0),
+                reverse=not self._sort_reversed,
+            )
+        col.resort(ordered)
 
     def select_command(self, name: str) -> None:
         depth = len(self._path)
@@ -76,6 +115,7 @@ class MillerColumns(Widget):
             self._committed.append(child_list)
             self._schemas_at_depth.append(schema.subcommands)
             viewport.mount(child_list)
+            self._sort_command_list(child_list)
             if not schema.has_own_params:
                 self._focus_index = len(self._committed) - 1
         else:
@@ -110,6 +150,7 @@ class MillerColumns(Widget):
             child_list.add_class("preview")
             self._preview.append(child_list)
             viewport.mount(child_list)
+            self._sort_command_list(child_list)
         else:
             form = ParameterList(schema)
             form.add_class("preview")
