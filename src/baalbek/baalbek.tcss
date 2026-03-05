@@ -22,28 +22,32 @@ MillerColumns {
 }
 
 CommandList {
-    width: 1fr;
-    border: solid $primary;
+    width: auto;
     min-width: 20;
+    max-width: 50;
+    border: solid $primary;
 }
 
 ParameterList {
-    width: 1fr;
-    border: double $secondary;
+    width: auto;
     min-width: 20;
+    max-width: 60;
+    border: double $secondary;
 }
 
 HistoryList {
-    width: 1fr;
-    border: solid $warning;
+    width: auto;
     min-width: 20;
+    max-width: 50;
+    border: solid $warning;
     margin-left: 1;
 }
 
 OutputViewer {
-    width: 2fr;
-    border: solid $success;
+    width: auto;
     min-width: 30;
+    max-width: 80;
+    border: solid $success;
 }
 
 .focused {
