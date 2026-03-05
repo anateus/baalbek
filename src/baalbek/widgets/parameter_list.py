@@ -20,6 +20,9 @@ class ParameterList(OptionList):
             super().__init__()
             self.parameter_list = parameter_list
 
+    class ValuesChanged(Message):
+        pass
+
     def __init__(self, schema: CommandSchema, **kwargs) -> None:
         self._schema = schema
         self._param_names: list[str] = []
@@ -99,6 +102,7 @@ class ParameterList(OptionList):
         self._values = values
         self._rebuild_display()
         self._save_draft()
+        self.post_message(self.ValuesChanged())
 
     def _save_draft(self) -> None:
         db_path = getattr(self.app, "_db_path", None)

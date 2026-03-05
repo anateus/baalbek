@@ -43,6 +43,9 @@ class RunPanel(Vertical):
                     break
         btn.disabled = has_unfilled
 
+    def on_parameter_list_values_changed(self, event) -> None:
+        self._update_button_state()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "run-button":
             self.post_message(self.RunRequested())

@@ -59,3 +59,19 @@ async def test_run_button_enabled_when_no_required_args():
         await pilot.pause()
         btn = pilot.app.query_one("#run-button", Button)
         assert btn.disabled is False
+
+
+@pytest.mark.asyncio
+async def test_run_button_enables_after_filling_required_arg():
+    schema = make_leaf_command(required_arg=True)
+    async with RunPanelApp(schema).run_test() as pilot:
+        await pilot.pause()
+        panel = pilot.app.query_one(RunPanel)
+        btn = pilot.app.query_one("#run-button", Button)
+        assert btn.disabled is True
+        panel.parameter_list._values["target"] = "prod"
+        panel.parameter_list._rebuild_display()
+        await pilot.pause()
+        panel._update_button_state()
+        await pilot.pause()
+        assert btn.disabled is False
