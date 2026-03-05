@@ -38,6 +38,7 @@ ParameterList {
 
 RunPanel {
     width: auto;
+    height: auto;
     min-width: 20;
     max-width: 60;
     border: double $secondary;
@@ -51,7 +52,8 @@ RunPanel ParameterList {
 #run-button {
     width: auto;
     min-width: 10;
-    height: 3;
+    height: 1;
+    margin-bottom: 1;
 }
 
 #run-button.highlighted {
