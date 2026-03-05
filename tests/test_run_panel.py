@@ -1,0 +1,61 @@
+from __future__ import annotations
+
+import pytest
+from textual.app import App, ComposeResult
+from textual.widgets import Button
+
+from baalbek.schemas import ArgumentSchema, CommandSchema
+from baalbek.widgets.run_panel import RunPanel
+
+
+def make_leaf_command(required_arg: bool = False) -> CommandSchema:
+    args = []
+    if required_arg:
+        args.append(ArgumentSchema(
+            name="target",
+            type="STRING",
+            required=True,
+            default=None,
+            choices=None,
+            multiple=False,
+            nargs=1,
+        ))
+    return CommandSchema(
+        name="deploy",
+        docstring="Deploy",
+        options=[],
+        arguments=args,
+    )
+
+
+class RunPanelApp(App):
+    def __init__(self, schema: CommandSchema) -> None:
+        super().__init__()
+        self._schema = schema
+
+    def compose(self) -> ComposeResult:
+        yield RunPanel(self._schema)
+
+
+@pytest.mark.asyncio
+async def test_run_panel_has_button():
+    async with RunPanelApp(make_leaf_command()).run_test() as pilot:
+        await pilot.pause()
+        btn = pilot.app.query_one("#run-button", Button)
+        assert btn is not None
+
+
+@pytest.mark.asyncio
+async def test_run_button_disabled_when_required_arg_missing():
+    async with RunPanelApp(make_leaf_command(required_arg=True)).run_test() as pilot:
+        await pilot.pause()
+        btn = pilot.app.query_one("#run-button", Button)
+        assert btn.disabled is True
+
+
+@pytest.mark.asyncio
+async def test_run_button_enabled_when_no_required_args():
+    async with RunPanelApp(make_leaf_command(required_arg=False)).run_test() as pilot:
+        await pilot.pause()
+        btn = pilot.app.query_one("#run-button", Button)
+        assert btn.disabled is False

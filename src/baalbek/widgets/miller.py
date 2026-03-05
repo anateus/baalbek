@@ -9,6 +9,7 @@ from baalbek.db import SortMode
 from baalbek.schemas import CommandSchema
 from baalbek.widgets.command_list import CommandList
 from baalbek.widgets.parameter_list import ParameterList
+from baalbek.widgets.run_panel import RunPanel
 
 
 class MillerColumns(Widget):
@@ -117,10 +118,10 @@ class MillerColumns(Widget):
             if not schema.has_own_params:
                 self._focus_index = len(self._committed) - 1
         else:
-            form = ParameterList(schema)
-            self._committed.append(form)
+            panel = RunPanel(schema)
+            self._committed.append(panel)
             self._schemas_at_depth.append(schema)
-            viewport.mount(form)
+            viewport.mount(panel)
             self._focus_index = len(self._committed) - 1
             self.post_message(self.CommandSelected(schema))
 
@@ -230,6 +231,8 @@ class MillerColumns(Widget):
         focused = self.focused_column
         if isinstance(focused, (CommandList, ParameterList, HistoryList)):
             focused.action_cursor_down()
+        elif isinstance(focused, RunPanel):
+            focused.parameter_list.action_cursor_down()
 
     def move_cursor_up(self) -> None:
         from baalbek.widgets.history_list import HistoryList
@@ -237,6 +240,8 @@ class MillerColumns(Widget):
         focused = self.focused_column
         if isinstance(focused, (CommandList, ParameterList, HistoryList)):
             focused.action_cursor_up()
+        elif isinstance(focused, RunPanel):
+            focused.parameter_list.action_cursor_up()
 
     def select_highlighted(self) -> None:
         focused = self.focused_column
@@ -244,6 +249,8 @@ class MillerColumns(Widget):
             self.select_command(focused.selected_schema.name)
         elif isinstance(focused, ParameterList):
             focused.open_edit_for_highlighted()
+        elif isinstance(focused, RunPanel):
+            focused.parameter_list.open_edit_for_highlighted()
 
     def _update_focus_styles(self) -> None:
         for i, col in enumerate(self._columns):
@@ -270,9 +277,13 @@ class MillerColumns(Widget):
             if isinstance(col, CommandList):
                 if col.selected_schema:
                     args.append(col.selected_schema.name)
-            elif isinstance(col, ParameterList):
-                schema = col._schema
-                values = col.get_values()
+            elif isinstance(col, (ParameterList, RunPanel)):
+                if isinstance(col, RunPanel):
+                    schema = col.parameter_list._schema
+                    values = col.parameter_list.get_values()
+                else:
+                    schema = col._schema
+                    values = col.get_values()
                 for opt in schema.options:
                     val = values.get(opt.name)
                     if val is None:

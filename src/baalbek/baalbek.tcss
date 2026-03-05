@@ -36,6 +36,24 @@ ParameterList {
     border: double $secondary;
 }
 
+RunPanel {
+    width: auto;
+    min-width: 20;
+    max-width: 60;
+    border: double $secondary;
+}
+
+RunPanel ParameterList {
+    border: none;
+    width: 1fr;
+}
+
+#run-button {
+    dock: top;
+    width: 100%;
+    margin-bottom: 1;
+}
+
 HistoryList {
     width: auto;
     min-width: 20;

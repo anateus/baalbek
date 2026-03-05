@@ -237,3 +237,16 @@ async def test_all_columns_visible_when_they_fit():
         visible = [c for c in all_cols if c.display]
         assert len(all_cols) > 3
         assert len(visible) == len(all_cols)
+
+
+@pytest.mark.asyncio
+async def test_leaf_command_creates_run_panel():
+    from baalbek.widgets.run_panel import RunPanel
+    commands = make_commands()
+    async with MillerApp(commands).run_test() as pilot:
+        mc = pilot.app.query_one(MillerColumns)
+        await pilot.pause()
+        mc.select_command("logs")
+        await pilot.pause()
+        panels = pilot.app.query(RunPanel)
+        assert len(panels) >= 1

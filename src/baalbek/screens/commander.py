@@ -10,6 +10,7 @@ from baalbek.introspect import introspect_click_app
 from baalbek.widgets.breadcrumbs import Breadcrumbs
 from baalbek.widgets.miller import MillerColumns
 from baalbek.widgets.parameter_list import ParameterList
+from baalbek.widgets.run_panel import RunPanel
 
 
 class CommanderScreen(Screen):
@@ -50,7 +51,7 @@ class CommanderScreen(Screen):
             from baalbek.widgets.output_viewer import OutputViewer
             if isinstance(mc.focused_column, OutputViewer):
                 self._zoom_output(mc.focused_column._raw_output)
-            elif isinstance(mc.focused_column, ParameterList):
+            elif isinstance(mc.focused_column, (ParameterList, RunPanel)):
                 mc.select_highlighted()
             elif isinstance(mc.focused_column, HistoryList):
                 record = mc.focused_column.selected_record
@@ -184,6 +185,11 @@ class CommanderScreen(Screen):
         col = mc.focused_column
         if isinstance(col, ParameterList):
             col.reset_to_defaults()
+        elif isinstance(col, RunPanel):
+            col.parameter_list.reset_to_defaults()
+
+    def on_run_panel_run_requested(self, event) -> None:
+        self.action_run_command()
 
     def on_miller_columns_command_selected(self, event: MillerColumns.CommandSelected) -> None:
         from baalbek.db import HistoryDB
