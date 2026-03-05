@@ -78,10 +78,37 @@ class CommanderScreen(Screen):
             mc = self.query_one(MillerColumns)
             mc.move_cursor_up()
             event.prevent_default()
+        elif key == "s":
+            self._cycle_sort(reverse=False)
+            event.prevent_default()
+        elif key == "S":
+            self._cycle_sort(reverse=True)
+            event.prevent_default()
 
     def _update_breadcrumbs(self) -> None:
         mc = self.query_one(MillerColumns)
         self.query_one(Breadcrumbs).path = mc.current_path
+
+    def _cycle_sort(self, reverse: bool) -> None:
+        from baalbek.db import HistoryDB, SortMode, compute_frequency_scores
+
+        mc = self.query_one(MillerColumns)
+        mc.cycle_sort(reverse=reverse)
+
+        frequency_scores: dict[str, float] = {}
+        if mc.sort_mode == SortMode.FREQUENCY:
+            try:
+                db = HistoryDB(self.app._db_path)
+                try:
+                    runs = db.recent_command_data(days=7)
+                finally:
+                    db.close()
+                all_command_names = set(self._commands.keys())
+                frequency_scores = compute_frequency_scores(runs, all_command_names)
+            except AttributeError:
+                pass
+
+        mc.apply_sort(mc.sort_mode, mc.sort_reversed, frequency_scores)
 
     def action_quit(self) -> None:
         self.app.exit()
