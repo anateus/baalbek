@@ -75,3 +75,19 @@ async def test_run_button_enables_after_filling_required_arg():
         panel._update_button_state()
         await pilot.pause()
         assert btn.disabled is False
+
+
+@pytest.mark.asyncio
+async def test_cursor_wraps_to_run_button():
+    schema = make_leaf_command(required_arg=True)
+    async with RunPanelApp(schema).run_test() as pilot:
+        await pilot.pause()
+        panel = pilot.app.query_one(RunPanel)
+        assert not panel.is_button_highlighted
+        for _ in range(panel.parameter_list.option_count):
+            panel.action_cursor_down()
+        await pilot.pause()
+        assert panel.is_button_highlighted
+        panel.action_cursor_down()
+        await pilot.pause()
+        assert not panel.is_button_highlighted

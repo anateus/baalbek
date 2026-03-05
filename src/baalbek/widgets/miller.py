@@ -236,7 +236,7 @@ class MillerColumns(Widget):
         if isinstance(focused, (CommandList, ParameterList, HistoryList)):
             focused.action_cursor_down()
         elif isinstance(focused, RunPanel):
-            focused.parameter_list.action_cursor_down()
+            focused.action_cursor_down()
 
     def move_cursor_up(self) -> None:
         from baalbek.widgets.history_list import HistoryList
@@ -245,7 +245,7 @@ class MillerColumns(Widget):
         if isinstance(focused, (CommandList, ParameterList, HistoryList)):
             focused.action_cursor_up()
         elif isinstance(focused, RunPanel):
-            focused.parameter_list.action_cursor_up()
+            focused.action_cursor_up()
 
     def select_highlighted(self) -> None:
         focused = self.focused_column
@@ -254,7 +254,7 @@ class MillerColumns(Widget):
         elif isinstance(focused, ParameterList):
             focused.open_edit_for_highlighted()
         elif isinstance(focused, RunPanel):
-            focused.parameter_list.open_edit_for_highlighted()
+            focused.open_edit_or_run()
 
     def _update_focus_styles(self) -> None:
         for i, col in enumerate(self._columns):

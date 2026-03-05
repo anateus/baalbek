@@ -49,9 +49,13 @@ RunPanel ParameterList {
 }
 
 #run-button {
-    dock: top;
     width: 100%;
-    margin-bottom: 1;
+    min-width: 16;
+    height: 3;
+}
+
+#run-button.highlighted {
+    border: tall $accent;
 }
 
 HistoryList {

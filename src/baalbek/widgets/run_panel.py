@@ -16,6 +16,7 @@ class RunPanel(Vertical):
     def __init__(self, schema: CommandSchema, **kwargs) -> None:
         super().__init__(**kwargs)
         self._schema = schema
+        self._button_highlighted = False
 
     def compose(self) -> ComposeResult:
         yield Button("Run", id="run-button", variant="success", disabled=self._has_unfilled_required())
@@ -30,6 +31,57 @@ class RunPanel(Vertical):
     @property
     def parameter_list(self) -> ParameterList:
         return self.query_one(ParameterList)
+
+    @property
+    def is_button_highlighted(self) -> bool:
+        return self._button_highlighted
+
+    def _update_button_visual(self) -> None:
+        btn = self.query_one("#run-button", Button)
+        if self._button_highlighted:
+            btn.add_class("highlighted")
+        else:
+            btn.remove_class("highlighted")
+
+    def action_cursor_down(self) -> None:
+        pl = self.parameter_list
+        if self._button_highlighted:
+            self._button_highlighted = False
+            self._update_button_visual()
+            if pl.option_count > 0:
+                pl.highlighted = 0
+        else:
+            idx = pl.highlighted
+            if idx is not None and idx >= pl.option_count - 1:
+                self._button_highlighted = True
+                self._update_button_visual()
+                pl.highlighted = None
+            else:
+                pl.action_cursor_down()
+
+    def action_cursor_up(self) -> None:
+        pl = self.parameter_list
+        if self._button_highlighted:
+            self._button_highlighted = False
+            self._update_button_visual()
+            if pl.option_count > 0:
+                pl.highlighted = pl.option_count - 1
+        else:
+            idx = pl.highlighted
+            if idx is not None and idx <= 0:
+                self._button_highlighted = True
+                self._update_button_visual()
+                pl.highlighted = None
+            else:
+                pl.action_cursor_up()
+
+    def open_edit_or_run(self) -> None:
+        if self._button_highlighted:
+            btn = self.query_one("#run-button", Button)
+            if not btn.disabled:
+                self.post_message(self.RunRequested())
+        else:
+            self.parameter_list.open_edit_for_highlighted()
 
     def _update_button_state(self) -> None:
         btn = self.query_one("#run-button", Button)
