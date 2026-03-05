@@ -20,7 +20,10 @@ class RunPanel(Vertical):
 
     def compose(self) -> ComposeResult:
         yield Button("Run", id="run-button", variant="success", disabled=self._has_unfilled_required())
-        yield ParameterList(self._schema)
+        pl = ParameterList(self._schema)
+        if self.has_class("preview"):
+            pl.add_class("preview")
+        yield pl
 
     def _has_unfilled_required(self) -> bool:
         for arg in self._schema.arguments:

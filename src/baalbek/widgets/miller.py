@@ -156,10 +156,10 @@ class MillerColumns(Widget):
             self._sort_command_list(child_list)
             self._build_preview_chain(child_list)
         else:
-            form = ParameterList(schema)
-            form.add_class("preview")
-            self._preview.append(form)
-            viewport.mount(form)
+            panel = RunPanel(schema)
+            panel.add_class("preview")
+            self._preview.append(panel)
+            viewport.mount(panel)
 
     def _clear_preview(self) -> None:
         for col in self._preview:
