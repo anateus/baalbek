@@ -84,9 +84,8 @@ HistoryList {
 }
 
 OutputViewer {
-    width: auto;
+    width: 100vw;
     min-width: 30;
-    max-width: 80;
     border: solid $success;
 }
 
