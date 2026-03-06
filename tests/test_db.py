@@ -114,7 +114,7 @@ def test_compute_frequency_scores_basic():
         ("deploy web", now.isoformat()),
         ("logs tail", now.isoformat()),
     ]
-    scores = compute_frequency_scores(runs, {"deploy", "logs"})
+    scores = compute_frequency_scores(runs)
     assert scores["deploy"] > scores["logs"]
 
 
@@ -127,15 +127,21 @@ def test_compute_frequency_scores_recency_weighting():
         ("deploy web", old),
         ("logs tail", now.isoformat()),
     ]
-    scores = compute_frequency_scores(runs, {"deploy", "logs"})
+    scores = compute_frequency_scores(runs)
     assert scores["logs"] > scores["deploy"]
 
 
-def test_compute_frequency_scores_unknown_commands_ignored():
+def test_compute_frequency_scores_includes_children():
     now = datetime.now(timezone.utc)
-    runs = [("unknown cmd", now.isoformat())]
-    scores = compute_frequency_scores(runs, {"deploy", "logs"})
-    assert scores == {}
+    runs = [
+        ("deploy production", now.isoformat()),
+        ("deploy staging", now.isoformat()),
+    ]
+    scores = compute_frequency_scores(runs)
+    assert "deploy" in scores
+    assert "production" in scores
+    assert "staging" in scores
+    assert scores["deploy"] > scores["production"]
 
 
 def test_sort_mode_enum():

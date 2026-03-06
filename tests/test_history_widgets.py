@@ -55,19 +55,18 @@ class OutputViewerApp(App):
 async def test_history_list_renders():
     async with HistoryListApp(make_records()).run_test() as pilot:
         hl = pilot.app.query_one(HistoryList)
-        assert hl.option_count == 2
+        assert hl.option_count == 3
 
 
 @pytest.mark.asyncio
-async def test_history_list_uses_colored_borders_not_checkmarks():
+async def test_history_list_uses_table_with_border_column():
+    from rich.table import Table
+
     async with HistoryListApp(make_records()).run_test() as pilot:
         hl = pilot.app.query_one(HistoryList)
-        for idx in range(hl.option_count):
+        for idx in range(1, hl.option_count):
             option = hl.get_option_at_index(idx)
-            label_str = str(option.prompt)
-            assert "\u2713" not in label_str
-            assert "\u2717" not in label_str
-            assert "\u258c" in label_str
+            assert isinstance(option.prompt, Table)
 
 
 @pytest.mark.asyncio

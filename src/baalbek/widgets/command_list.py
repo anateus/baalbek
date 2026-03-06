@@ -21,7 +21,7 @@ class CommandList(OptionList):
         self._commands = commands
         self._schemas: list[CommandSchema] = []
         options: list[Option] = []
-        for name in sorted(commands):
+        for name in commands:
             schema = commands[name]
             self._schemas.append(schema)
             label = f"{name} \u25b8" if schema.is_group else name

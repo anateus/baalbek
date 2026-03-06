@@ -77,6 +77,7 @@ class MillerColumns(Widget):
         for col in self._committed:
             if isinstance(col, CommandList):
                 self._sort_command_list(col)
+        self._sync_preview()
 
     def _sort_command_list(self, col: CommandList) -> None:
         names = list(col._commands.keys())
@@ -89,6 +90,7 @@ class MillerColumns(Widget):
                 reverse=not self._sort_reversed,
             )
         col.resort(ordered)
+        col.highlighted = 0
 
     def select_command(self, name: str) -> None:
         depth = len(self._path)

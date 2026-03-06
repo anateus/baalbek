@@ -73,7 +73,7 @@ HistoryList {
     min-width: 20;
     max-width: 50;
     border: solid $warning;
-    margin-left: 1;
+    margin-left: 3;
 }
 
 OutputViewer {

@@ -108,7 +108,7 @@ class CommanderScreen(Screen):
                 runs = db.recent_command_data(days=7)
             finally:
                 db.close()
-            return compute_frequency_scores(runs, set(self._commands.keys()))
+            return compute_frequency_scores(runs)
         except AttributeError:
             return {}
 

@@ -125,7 +125,7 @@ class HistoryDB:
 
 
 def compute_frequency_scores(
-    runs: list[tuple[str, str]], target_names: set[str]
+    runs: list[tuple[str, str]],
 ) -> dict[str, float]:
     scores: dict[str, float] = defaultdict(float)
     now = datetime.now(timezone.utc)
@@ -133,9 +133,6 @@ def compute_frequency_scores(
         dt = datetime.fromisoformat(started_at)
         age_days = (now - dt).total_seconds() / 86400
         weight = 2 ** (-age_days)
-        words = command_str.split()
-        for word in words:
-            if word in target_names:
-                scores[word] += weight
-                break
+        for word in command_str.split():
+            scores[word] += weight
     return dict(scores)

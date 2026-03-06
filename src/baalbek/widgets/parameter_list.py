@@ -35,8 +35,6 @@ class ParameterList(OptionList):
         return "/".join(s.name for s in self._schema.path_from_root)
 
     def on_mount(self) -> None:
-        if self.has_class("preview"):
-            return
         db_path = getattr(self.app, "_db_path", None)
         if db_path is None:
             return

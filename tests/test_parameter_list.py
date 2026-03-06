@@ -138,15 +138,15 @@ async def test_saves_draft_on_modal_done(tmp_path: Path):
 
 
 @pytest.mark.asyncio
-async def test_preview_does_not_load_draft(tmp_path: Path):
+async def test_preview_loads_draft_for_display(tmp_path: Path):
     db_path = tmp_path / "history.db"
     db = HistoryDB(db_path)
-    db.save_draft("deploy", {"name": "should-not-load"})
+    db.save_draft("deploy", {"name": "saved-value"})
     db.close()
     app = ParameterListApp(_sample_schema(), db_path=db_path, preview=True)
     async with app.run_test() as pilot:
         pl = pilot.app.query_one(ParameterList)
-        assert pl.get_values() == {}
+        assert pl.get_values() == {"name": "saved-value"}
 
 
 @pytest.mark.asyncio

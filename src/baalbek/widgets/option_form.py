@@ -53,9 +53,12 @@ class OptionForm(VerticalScroll):
                 elif opt.choices:
                     yield Label(f"  {' '.join(opt.opts)}")
                     options = [(c, c) for c in opt.choices]
+                    default = opt.default
+                    if default is None or _default_str(default) == "" or default not in opt.choices:
+                        default = Select.NULL
                     yield Select(
                         options,
-                        value=opt.default if opt.default is not None else Select.NULL,
+                        value=default,
                         allow_blank=True,
                         id=widget_id,
                     )

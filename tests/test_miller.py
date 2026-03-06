@@ -270,7 +270,11 @@ async def test_preview_unfurls_recursively():
     async with MillerApp(make_deep_commands()).run_test(size=(200, 40)) as pilot:
         mc = pilot.app.query_one(MillerColumns)
         await pilot.pause()
-        mc.move_cursor_down()
+        first_col = mc._committed[0]
+        for idx, schema in enumerate(first_col._schemas):
+            if schema.name == "top":
+                first_col.highlighted = idx
+                break
         await pilot.pause()
         preview_cols = mc._preview
         assert len(preview_cols) >= 3
