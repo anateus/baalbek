@@ -1,6 +1,6 @@
 [project]
 name = "baalbek"
-version = "0.2.16"
+version = "0.2.17"
 description = "Miller column TUI explorer for Click CLI apps"
 readme = "README.md"
 authors = [
