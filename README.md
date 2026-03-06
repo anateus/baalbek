@@ -4,6 +4,8 @@ A Miller column TUI explorer for [Click](https://click.palletsprojects.com/) CLI
 
 Navigate your CLI's command tree with vim-style keybindings, preview subcommands and options in real time, and build up commands interactively.
 
+![Screenshot](screenshot.svg)
+
 ## Install
 
 Add to your `pyproject.toml` dependencies:
@@ -18,8 +20,9 @@ PyPI publishing coming soon.
 
 ```python
 import click
-from baalbek import explorer
+from baalbek import tui
 
+@tui()
 @click.group()
 def cli():
     pass
@@ -27,21 +30,26 @@ def cli():
 # ... define your commands ...
 
 if __name__ == "__main__":
-    explorer(cli)
+    cli()
 ```
+
+Then run `cli tui` to launch the interactive explorer.
 
 ## Keybindings
 
 | Key | Action |
 |-----|--------|
-| `h` / `Left` | Move focus left |
-| `l` / `Right` / `Enter` | Move focus right / select |
-| `j` / `Down` | Move cursor down |
-| `k` / `Up` | Move cursor up |
-| `i` | Enter edit mode (edit field values) |
-| `Escape` | Exit edit mode / quit |
+| `h` / `←` | Move focus left |
+| `l` / `→` / `Enter` | Move focus right / select |
+| `j` / `↓` | Move cursor down |
+| `k` / `↑` | Move cursor up |
+| `s` / `S` | Cycle sort mode / reverse sort |
+| `/` | Fuzzy search within focused column |
 | `Ctrl+R` | Run command |
 | `Ctrl+H` | Toggle history |
+| `Ctrl+D` | Reset parameters to defaults |
+| `Tab` / `Shift+Tab` | Move focus right / left |
+| `q` | Quit |
 
 ## Acknowledgements
 
