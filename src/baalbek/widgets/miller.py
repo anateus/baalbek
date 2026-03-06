@@ -209,6 +209,12 @@ class MillerColumns(Widget):
             return columns[self._focus_index]
         return None
 
+    def next_committed_column(self) -> Widget | None:
+        next_idx = self._focus_index + 1
+        if next_idx < len(self._committed):
+            return self._committed[next_idx]
+        return None
+
     def move_focus_right(self) -> bool:
         next_idx = self._focus_index + 1
         if next_idx < len(self._committed):

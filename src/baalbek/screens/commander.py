@@ -80,11 +80,17 @@ class CommanderScreen(Screen):
         mc = self.query_one(MillerColumns)
         if isinstance(mc.focused_column, OutputViewer):
             self._zoom_output(mc.focused_column._raw_output)
-        elif isinstance(mc.focused_column, (ParameterList, RunPanel)):
-            if mc.move_focus_right():
+        elif isinstance(mc.focused_column, ParameterList):
+            from baalbek.widgets.command_list import CommandList
+
+            next_col = mc.next_committed_column()
+            if isinstance(next_col, CommandList):
+                mc.move_focus_right()
                 self._update_breadcrumbs()
             else:
                 mc.select_highlighted()
+        elif isinstance(mc.focused_column, RunPanel):
+            mc.select_highlighted()
         elif isinstance(mc.focused_column, HistoryList):
             record = mc.focused_column.selected_record
             if record:
