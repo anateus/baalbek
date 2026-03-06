@@ -225,7 +225,8 @@ class CommanderScreen(Screen):
     def on_miller_columns_command_selected(self, event: MillerColumns.CommandSelected) -> None:
         from baalbek.db import HistoryDB
 
-        command_path = " ".join(self.query_one(MillerColumns).get_command_args())
+        mc = self.query_one(MillerColumns)
+        command_path = " ".join(mc.get_command_args())
         if not command_path:
             return
         db = HistoryDB(self.app._db_path)
@@ -235,7 +236,12 @@ class CommanderScreen(Screen):
             db.close()
         matching = [r for r in all_records if command_path in r.command]
         if matching:
-            self.query_one(MillerColumns).show_history(matching)
+            mc.show_history(matching)
+            if matching[0].exit_code and matching[0].exit_code != 0:
+                focused = mc.focused_column
+                match focused:
+                    case RunPanel():
+                        focused.show_last_run_failed()
 
     def on_history_list_selected(self, event) -> None:
         mc = self.query_one(MillerColumns)

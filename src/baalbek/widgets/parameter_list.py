@@ -46,6 +46,7 @@ class ParameterList(OptionList):
         if saved:
             self._values = saved
             self._rebuild_display()
+            self.post_message(self.ValuesChanged())
 
     def _build_options(self, schema: CommandSchema) -> list[Option]:
         options: list[Option] = []

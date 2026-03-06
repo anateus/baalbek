@@ -24,6 +24,9 @@ class RunPanel(Vertical):
         if self._button_disabled:
             btn.add_class("disabled")
         yield btn
+        hint = Static("", id="run-hint")
+        hint.display = False
+        yield hint
         pl = ParameterList(self._schema)
         if self.has_class("preview"):
             pl.add_class("preview")
@@ -105,8 +108,19 @@ class RunPanel(Vertical):
         else:
             btn.remove_class("disabled")
 
+    def show_last_run_failed(self) -> None:
+        hint = self.query_one("#run-hint", Static)
+        hint.update("Last run with these arguments failed")
+        hint.display = True
+
+    def _clear_hint(self) -> None:
+        hint = self.query_one("#run-hint", Static)
+        hint.update("")
+        hint.display = False
+
     def on_parameter_list_values_changed(self, event) -> None:
         self._update_button_state()
+        self._clear_hint()
 
     def on_click(self, event) -> None:
         if self.query_one("#run-button", Static).is_mouse_over and not self._button_disabled:

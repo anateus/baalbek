@@ -68,6 +68,13 @@ RunPanel ParameterList {
     color: $text-muted;
 }
 
+#run-hint {
+    width: 1fr;
+    height: 1;
+    color: $error;
+    text-align: center;
+}
+
 HistoryList {
     width: auto;
     min-width: 20;
