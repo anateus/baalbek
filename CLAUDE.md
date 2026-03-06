@@ -69,6 +69,10 @@ if isinstance(schemas, dict):
 
 Bump the version in `pyproject.toml` with every commit that touches code. Follow semver loosely — default to patch bumps, only bump minor/major for truly significant changes.
 
+## Commits
+
+Always include `uv.lock` when it has changes — it must stay in sync with `pyproject.toml`.
+
 ## Known Gotchas
 
 - Pyright reports false positive unresolved imports (runs from baalbek dir but consumer projects have their own venvs). Ignore these.
