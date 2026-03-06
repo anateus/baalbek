@@ -364,6 +364,18 @@ class MillerColumns(Widget):
             col.display = False
             col.remove()
 
+    def get_focused_labels(self) -> list[str]:
+        from baalbek.widgets.history_list import HistoryList
+
+        focused = self.focused_column
+        if isinstance(focused, CommandList):
+            return [s.name for s in focused._schemas]
+        if isinstance(focused, ParameterList):
+            return list(focused._param_names)
+        if isinstance(focused, HistoryList):
+            return [rec.command for rec in focused._records]
+        return []
+
     def _update_viewport(self) -> None:
         for col in self._columns:
             col.display = True

@@ -12,6 +12,7 @@ from baalbek.widgets.breadcrumbs import Breadcrumbs
 from baalbek.widgets.miller import MillerColumns
 from baalbek.widgets.parameter_list import ParameterList
 from baalbek.widgets.run_panel import RunPanel
+from baalbek.widgets.search_bar import SearchBar
 
 
 class CommanderScreen(Screen):
@@ -25,6 +26,7 @@ class CommanderScreen(Screen):
         Binding("ctrl+h", "toggle_history", "History", show=True),
         Binding("ctrl+d", "reset_defaults", "Reset", show=True),
         Binding("q", "request_quit", "Quit", show=True),
+        Binding("slash", "search", "/ Search", show=True),
     ]
 
     def __init__(self, cli: click.BaseCommand, app_name: str | None = None, app_description: str | None = None, **kwargs) -> None:
@@ -33,6 +35,8 @@ class CommanderScreen(Screen):
         self._app_name = app_name or cli.name or "CLI"
         self._app_description = app_description
         self._commands = introspect_click_app(cli, exclude_names={"tui"})
+        self._search_active: bool = False
+        self._search_query: str = ""
 
     def compose(self) -> ComposeResult:
         title = f"[b]{self._app_name}[/b]"
@@ -41,9 +45,14 @@ class CommanderScreen(Screen):
         yield Static(title, id="app-title", markup=True)
         yield Breadcrumbs(id="breadcrumbs")
         yield MillerColumns(self._commands, id="miller")
+        yield SearchBar(id="search-bar")
         yield Footer()
 
     def on_key(self, event) -> None:
+        if self._search_active:
+            self._handle_search_key(event)
+            return
+
         key = event.key
         if key == "tab":
             mc = self.query_one(MillerColumns)
@@ -72,7 +81,10 @@ class CommanderScreen(Screen):
         if isinstance(mc.focused_column, OutputViewer):
             self._zoom_output(mc.focused_column._raw_output)
         elif isinstance(mc.focused_column, (ParameterList, RunPanel)):
-            mc.select_highlighted()
+            if mc.move_focus_right():
+                self._update_breadcrumbs()
+            else:
+                mc.select_highlighted()
         elif isinstance(mc.focused_column, HistoryList):
             record = mc.focused_column.selected_record
             if record:
@@ -226,6 +238,74 @@ class CommanderScreen(Screen):
     def _zoom_output(self, raw_output: bytes) -> None:
         from baalbek.screens.output_zoom import OutputZoomScreen
         self.app.push_screen(OutputZoomScreen(raw_output))
+
+    def action_search(self) -> None:
+        self._activate_search()
+
+    def _activate_search(self) -> None:
+        self._search_active = True
+        self._search_query = ""
+        bar = self.query_one(SearchBar)
+        bar.query_text = ""
+        bar.show()
+
+    def _deactivate_search(self) -> None:
+        self._search_active = False
+        self._search_query = ""
+        bar = self.query_one(SearchBar)
+        bar.query_text = ""
+        bar.hide()
+
+    def _handle_search_key(self, event) -> None:
+        key = event.key
+        event.prevent_default()
+        event.stop()
+
+        if key == "escape":
+            self._deactivate_search()
+            return
+
+        if key in ("enter", "return"):
+            self._search_query = ""
+            bar = self.query_one(SearchBar)
+            bar.query_text = ""
+            self.action_nav_right()
+            return
+
+        if key == "backspace":
+            if self._search_query:
+                self._search_query = self._search_query[:-1]
+            else:
+                self._deactivate_search()
+                return
+        elif len(event.character or "") == 1 and event.character.isprintable():
+            self._search_query += event.character
+        else:
+            return
+
+        bar = self.query_one(SearchBar)
+        bar.query_text = self._search_query
+        self._apply_fuzzy_search()
+
+    def _apply_fuzzy_search(self) -> None:
+        from pfzy.score import fzy_scorer
+
+        mc = self.query_one(MillerColumns)
+        labels = mc.get_focused_labels()
+        if not labels or not self._search_query:
+            return
+
+        best_idx = 0
+        best_score = float("-inf")
+        for i, label in enumerate(labels):
+            score, _ = fzy_scorer(self._search_query, label)
+            if score > best_score:
+                best_score = score
+                best_idx = i
+
+        focused = mc.focused_column
+        if focused and hasattr(focused, "highlighted"):
+            focused.highlighted = best_idx
 
     def build_command_args(self) -> list[str]:
         import sys

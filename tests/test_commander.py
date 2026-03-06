@@ -108,6 +108,16 @@ async def test_q_shows_quit_confirmation():
 
 
 @pytest.mark.asyncio
+async def test_search_bar_present():
+    from baalbek.widgets.search_bar import SearchBar
+
+    async with CommanderApp().run_test() as pilot:
+        await pilot.pause()
+        bar = pilot.app.screen.query_one(SearchBar)
+        assert bar.display is False
+
+
+@pytest.mark.asyncio
 async def test_escape_does_not_quit():
     async with CommanderApp().run_test() as pilot:
         await pilot.pause()
