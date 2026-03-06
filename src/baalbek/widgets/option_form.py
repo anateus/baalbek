@@ -77,12 +77,9 @@ class OptionForm(VerticalScroll):
                 widget = self.query_one(f"#{widget_id}")
             except Exception:
                 continue
-            if isinstance(widget, Input):
-                values[param_name] = widget.value
-            elif isinstance(widget, Checkbox):
-                values[param_name] = widget.value
-            elif isinstance(widget, Select):
-                values[param_name] = widget.value
+            match widget:
+                case Input() | Checkbox() | Select():
+                    values[param_name] = widget.value
         return values
 
     def set_values(self, values: dict[str, Any]) -> None:
@@ -94,12 +91,13 @@ class OptionForm(VerticalScroll):
                 widget = self.query_one(f"#{widget_id}")
             except Exception:
                 continue
-            if isinstance(widget, Input):
-                widget.value = str(val) if val else ""
-            elif isinstance(widget, Checkbox):
-                widget.value = bool(val)
-            elif isinstance(widget, Select):
-                widget.value = val
+            match widget:
+                case Input():
+                    widget.value = str(val) if val else ""
+                case Checkbox():
+                    widget.value = bool(val)
+                case Select():
+                    widget.value = val
 
     def focus_param(self, name: str) -> None:
         widget_id = self._widget_map.get(name)

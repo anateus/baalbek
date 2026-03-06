@@ -75,8 +75,9 @@ class MillerColumns(Widget):
         self._sort_reversed = reversed_
         self._frequency_scores = frequency_scores
         for col in self._committed:
-            if isinstance(col, CommandList):
-                self._sort_command_list(col)
+            match col:
+                case CommandList():
+                    self._sort_command_list(col)
         self._sync_preview()
 
     def _sort_command_list(self, col: CommandList) -> None:
@@ -241,28 +242,27 @@ class MillerColumns(Widget):
         from baalbek.widgets.history_list import HistoryList
 
         focused = self.focused_column
-        if isinstance(focused, (CommandList, ParameterList, HistoryList)):
-            focused.action_cursor_down()
-        elif isinstance(focused, RunPanel):
-            focused.action_cursor_down()
+        match focused:
+            case CommandList() | ParameterList() | HistoryList() | RunPanel():
+                focused.action_cursor_down()
 
     def move_cursor_up(self) -> None:
         from baalbek.widgets.history_list import HistoryList
 
         focused = self.focused_column
-        if isinstance(focused, (CommandList, ParameterList, HistoryList)):
-            focused.action_cursor_up()
-        elif isinstance(focused, RunPanel):
-            focused.action_cursor_up()
+        match focused:
+            case CommandList() | ParameterList() | HistoryList() | RunPanel():
+                focused.action_cursor_up()
 
     def select_highlighted(self) -> None:
         focused = self.focused_column
-        if isinstance(focused, CommandList) and focused.selected_schema:
-            self.select_command(focused.selected_schema.name)
-        elif isinstance(focused, ParameterList):
-            focused.open_edit_for_highlighted()
-        elif isinstance(focused, RunPanel):
-            focused.open_edit_or_run()
+        match focused:
+            case CommandList() if focused.selected_schema:
+                self.select_command(focused.selected_schema.name)
+            case ParameterList():
+                focused.open_edit_for_highlighted()
+            case RunPanel():
+                focused.open_edit_or_run()
 
     def _update_focus_styles(self) -> None:
         for i, col in enumerate(self._columns):
@@ -286,33 +286,37 @@ class MillerColumns(Widget):
     def get_command_args(self) -> list[str]:
         args: list[str] = []
         for col in self._committed:
-            if isinstance(col, CommandList):
-                if col.selected_schema:
-                    args.append(col.selected_schema.name)
-            elif isinstance(col, (ParameterList, RunPanel)):
-                if isinstance(col, RunPanel):
+            match col:
+                case CommandList():
+                    if col.selected_schema:
+                        args.append(col.selected_schema.name)
+                case RunPanel():
                     schema = col.parameter_list._schema
                     values = col.parameter_list.get_values()
-                else:
+                    self._append_param_args(args, schema, values)
+                case ParameterList():
                     schema = col._schema
                     values = col.get_values()
-                for opt in schema.options:
-                    val = values.get(opt.name)
-                    if val is None:
-                        continue
-                    if opt.is_flag:
-                        if val and val != opt.default:
-                            args.append(opt.opts[0])
-                        elif not val and opt.default:
-                            if opt.secondary_opts:
-                                args.append(opt.secondary_opts[0])
-                    elif val != "" and str(val) != str(opt.default):
-                        args.extend([opt.opts[0], str(val)])
-                for arg_schema in schema.arguments:
-                    val = values.get(arg_schema.name)
-                    if val and val != "":
-                        args.append(str(val))
+                    self._append_param_args(args, schema, values)
         return args
+
+    def _append_param_args(self, args: list[str], schema: CommandSchema, values: dict) -> None:
+        for opt in schema.options:
+            val = values.get(opt.name)
+            if val is None:
+                continue
+            if opt.is_flag:
+                if val and val != opt.default:
+                    args.append(opt.opts[0])
+                elif not val and opt.default:
+                    if opt.secondary_opts:
+                        args.append(opt.secondary_opts[0])
+            elif val != "" and str(val) != str(opt.default):
+                args.extend([opt.opts[0], str(val)])
+        for arg_schema in schema.arguments:
+            val = values.get(arg_schema.name)
+            if val and val != "":
+                args.append(str(val))
 
     def _trim_committed_to(self, count: int) -> None:
         from baalbek.widgets.history_list import HistoryList
@@ -320,9 +324,12 @@ class MillerColumns(Widget):
 
         while len(self._committed) > count:
             col = self._committed.pop()
-            if not isinstance(col, (HistoryList, OutputViewer)):
-                if self._schemas_at_depth:
-                    self._schemas_at_depth.pop()
+            match col:
+                case HistoryList() | OutputViewer():
+                    pass
+                case _:
+                    if self._schemas_at_depth:
+                        self._schemas_at_depth.pop()
             col.remove()
 
     def has_history(self) -> bool:
@@ -374,13 +381,15 @@ class MillerColumns(Widget):
         from baalbek.widgets.history_list import HistoryList
 
         focused = self.focused_column
-        if isinstance(focused, CommandList):
-            return [s.name for s in focused._schemas]
-        if isinstance(focused, ParameterList):
-            return list(focused._param_names)
-        if isinstance(focused, HistoryList):
-            return [rec.command for rec in focused._records]
-        return []
+        match focused:
+            case CommandList():
+                return [s.name for s in focused._schemas]
+            case ParameterList():
+                return list(focused._param_names)
+            case HistoryList():
+                return [rec.command for rec in focused._records]
+            case _:
+                return []
 
     def _update_viewport(self) -> None:
         for col in self._columns:

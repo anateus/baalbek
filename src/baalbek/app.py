@@ -51,11 +51,12 @@ def tui(
     db_path: Path | None = None,
 ) -> Any:
     def decorator(app: click.BaseCommand) -> click.Group:
-        if isinstance(app, click.Group):
-            group = app
-        else:
-            group = click.Group()
-            group.add_command(app)
+        match app:
+            case click.Group():
+                group = app
+            case _:
+                group = click.Group()
+                group.add_command(app)
 
         @group.command(name=command, help=help)
         def launch_tui():

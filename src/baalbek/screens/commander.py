@@ -74,30 +74,30 @@ class CommanderScreen(Screen):
         self._update_breadcrumbs()
 
     def action_nav_right(self) -> None:
+        from baalbek.widgets.command_list import CommandList
         from baalbek.widgets.history_list import HistoryList
         from baalbek.widgets.output_viewer import OutputViewer
 
         mc = self.query_one(MillerColumns)
-        if isinstance(mc.focused_column, OutputViewer):
-            self._zoom_output(mc.focused_column._raw_output)
-        elif isinstance(mc.focused_column, ParameterList):
-            from baalbek.widgets.command_list import CommandList
-
-            next_col = mc.next_committed_column()
-            if isinstance(next_col, CommandList):
+        match mc.focused_column:
+            case OutputViewer() as col:
+                self._zoom_output(col._raw_output)
+            case ParameterList():
+                next_col = mc.next_committed_column()
+                if isinstance(next_col, CommandList):
+                    mc.move_focus_right()
+                    self._update_breadcrumbs()
+                else:
+                    mc.select_highlighted()
+            case RunPanel():
+                mc.select_highlighted()
+            case HistoryList() as col:
+                record = col.selected_record
+                if record:
+                    mc.show_output(record.raw_output)
+            case _:
                 mc.move_focus_right()
                 self._update_breadcrumbs()
-            else:
-                mc.select_highlighted()
-        elif isinstance(mc.focused_column, RunPanel):
-            mc.select_highlighted()
-        elif isinstance(mc.focused_column, HistoryList):
-            record = mc.focused_column.selected_record
-            if record:
-                mc.show_output(record.raw_output)
-        else:
-            mc.move_focus_right()
-            self._update_breadcrumbs()
 
     def action_cursor_down(self) -> None:
         mc = self.query_one(MillerColumns)
@@ -213,11 +213,11 @@ class CommanderScreen(Screen):
 
     def action_reset_defaults(self) -> None:
         mc = self.query_one(MillerColumns)
-        col = mc.focused_column
-        if isinstance(col, ParameterList):
-            col.reset_to_defaults()
-        elif isinstance(col, RunPanel):
-            col.parameter_list.reset_to_defaults()
+        match mc.focused_column:
+            case ParameterList() as col:
+                col.reset_to_defaults()
+            case RunPanel() as col:
+                col.parameter_list.reset_to_defaults()
 
     def on_run_panel_run_requested(self, event) -> None:
         self.action_run_command()
