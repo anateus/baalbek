@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from unittest.mock import patch
 
 
@@ -225,3 +226,38 @@ class TestIntrospectMiseTasks:
         tree = introspect_mise_tasks(tasks, delimiter=":")
         assert "build" in tree
         assert "_internal" not in tree
+
+
+class TestLoadMiseTasks:
+    def test_load_returns_parsed_json(self):
+        from baalbek.mise_introspect import load_mise_tasks
+
+        fake_output = json.dumps([
+            {"name": "build", "description": "Build", "usage": "",
+             "source": "/p/mise.toml", "hide": False},
+        ])
+        with patch("baalbek.mise_introspect.subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 0
+            mock_run.return_value.stdout = fake_output
+            tasks = load_mise_tasks()
+
+        assert len(tasks) == 1
+        assert tasks[0]["name"] == "build"
+
+    def test_load_returns_empty_on_failure(self):
+        from baalbek.mise_introspect import load_mise_tasks
+
+        with patch("baalbek.mise_introspect.subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 1
+            mock_run.return_value.stdout = ""
+            tasks = load_mise_tasks()
+
+        assert tasks == []
+
+    def test_load_returns_empty_when_mise_not_found(self):
+        from baalbek.mise_introspect import load_mise_tasks
+
+        with patch("baalbek.mise_introspect.subprocess.run", side_effect=FileNotFoundError):
+            tasks = load_mise_tasks()
+
+        assert tasks == []

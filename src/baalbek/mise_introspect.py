@@ -9,6 +9,26 @@ from pathlib import Path
 from baalbek.schemas import ArgumentSchema, CommandSchema, OptionSchema
 
 
+def load_mise_tasks() -> list[dict]:
+    try:
+        result = subprocess.run(
+            ["mise", "tasks", "--all", "-x", "-J"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return []
+
+    if result.returncode != 0:
+        return []
+
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return []
+
+
 def _default_arguments() -> list[ArgumentSchema]:
     return [
         ArgumentSchema(
