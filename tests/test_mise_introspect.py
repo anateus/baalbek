@@ -147,3 +147,81 @@ class TestSplitTasksByDelimiter:
         assert "server" in tree["deploy"].subcommands
         assert tree["deploy"].run_name == "deploy"
         assert tree["deploy"].docstring == "Direct deploy"
+
+
+class TestIntrospectMiseTasks:
+    def _make_task(self, name, source, description="", usage="", hide=False):
+        return {
+            "name": name,
+            "description": description,
+            "usage": usage,
+            "source": source,
+            "hide": hide,
+        }
+
+    def test_single_source_no_directory_grouping(self):
+        from baalbek.mise_introspect import introspect_mise_tasks
+
+        tasks = [
+            self._make_task("build", "/project/mise.toml"),
+            self._make_task("test", "/project/mise.toml"),
+        ]
+        tree = introspect_mise_tasks(tasks, delimiter=":")
+        assert "build" in tree
+        assert "test" in tree
+
+    def test_multiple_sources_create_directory_groups(self):
+        from baalbek.mise_introspect import introspect_mise_tasks
+
+        tasks = [
+            self._make_task("build", "/project/mise.toml", "Build root"),
+            self._make_task("lint", "/project/sub/mise.toml", "Lint sub"),
+        ]
+        tree = introspect_mise_tasks(tasks, delimiter=":")
+        assert "sub" in tree
+        assert tree["sub"].is_group is True
+        assert "lint" in tree["sub"].subcommands
+        assert "build" in tree
+
+    def test_nested_directory_groups(self):
+        from baalbek.mise_introspect import introspect_mise_tasks
+
+        tasks = [
+            self._make_task("a", "/root/foo/mise.toml"),
+            self._make_task("b", "/root/foo/bar/mise.toml"),
+        ]
+        tree = introspect_mise_tasks(tasks, delimiter=":")
+        assert "a" in tree
+        assert "bar" in tree
+        assert tree["bar"].is_group is True
+        assert "b" in tree["bar"].subcommands
+
+    def test_delimiter_splitting_within_directory_groups(self):
+        from baalbek.mise_introspect import introspect_mise_tasks
+
+        tasks = [
+            self._make_task("deploy:server", "/project/mise.toml"),
+            self._make_task("deploy:client", "/project/mise.toml"),
+        ]
+        tree = introspect_mise_tasks(tasks, delimiter=":")
+        assert "deploy" in tree
+        assert tree["deploy"].is_group is True
+        assert "server" in tree["deploy"].subcommands
+        assert "client" in tree["deploy"].subcommands
+
+    def test_empty_tasks(self):
+        from baalbek.mise_introspect import introspect_mise_tasks
+
+        tree = introspect_mise_tasks([], delimiter=":")
+        assert tree == {}
+
+    def test_hidden_tasks_excluded(self):
+        from baalbek.mise_introspect import introspect_mise_tasks
+
+        tasks = [
+            self._make_task("build", "/p/mise.toml", hide=False),
+            self._make_task("_internal", "/p/mise.toml", hide=True),
+        ]
+        tree = introspect_mise_tasks(tasks, delimiter=":")
+        assert "build" in tree
+        assert "_internal" not in tree

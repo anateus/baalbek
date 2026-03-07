@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+from collections import defaultdict
+from pathlib import Path
 
 from baalbek.schemas import ArgumentSchema, CommandSchema, OptionSchema
 
@@ -151,6 +154,66 @@ def _split_tasks_by_delimiter(
                 arguments=arguments,
                 run_name=task["name"],
             )
+
+    _set_parents(root)
+    return root
+
+
+def _merge_trees(
+    target: dict[str, CommandSchema],
+    source: dict[str, CommandSchema],
+) -> None:
+    for name, schema in source.items():
+        if name in target and target[name].is_group and schema.is_group:
+            _merge_trees(target[name].subcommands, schema.subcommands)
+        else:
+            target[name] = schema
+
+
+def introspect_mise_tasks(
+    tasks: list[dict],
+    delimiter: str = ":",
+    cwd: Path | None = None,
+) -> dict[str, CommandSchema]:
+    if not tasks:
+        return {}
+
+    visible_tasks = [t for t in tasks if not t.get("hide", False)]
+    if not visible_tasks:
+        return {}
+
+    by_source: dict[Path, list[dict]] = defaultdict(list)
+    for task in visible_tasks:
+        source_dir = Path(task["source"]).parent
+        by_source[source_dir].append(task)
+
+    source_dirs = list(by_source.keys())
+
+    if len(source_dirs) == 1:
+        return _split_tasks_by_delimiter(visible_tasks, delimiter)
+
+    common = Path(os.path.commonpath(source_dirs))
+    root: dict[str, CommandSchema] = {}
+
+    for source_dir, dir_tasks in by_source.items():
+        rel = source_dir.relative_to(common)
+        segments = rel.parts if str(rel) != "." else ()
+
+        current = root
+        for segment in segments:
+            if segment not in current:
+                current[segment] = CommandSchema(
+                    name=segment,
+                    docstring=None,
+                    options=[],
+                    arguments=[],
+                    subcommands={},
+                    is_group=True,
+                )
+            current = current[segment].subcommands
+
+        task_tree = _split_tasks_by_delimiter(dir_tasks, delimiter)
+        _merge_trees(current, task_tree)
 
     _set_parents(root)
     return root
