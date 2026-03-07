@@ -42,6 +42,7 @@ class CommandSchema:
     subcommands: dict[str, CommandSchema] = field(default_factory=dict)
     parent: CommandSchema | None = None
     is_group: bool = False
+    run_name: str | None = None
 
     @property
     def path_from_root(self) -> list[CommandSchema]:

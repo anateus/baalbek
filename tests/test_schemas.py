@@ -103,3 +103,19 @@ def test_command_schema_has_own_params() -> None:
 
     without_params = CommandSchema(name="empty", docstring=None, options=[], arguments=[])
     assert without_params.has_own_params is False
+
+
+def test_command_schema_run_name_default() -> None:
+    cmd = CommandSchema(name="test", docstring=None, options=[], arguments=[])
+    assert cmd.run_name is None
+
+
+def test_command_schema_run_name_set() -> None:
+    cmd = CommandSchema(
+        name="prod",
+        docstring="Deploy to prod",
+        options=[],
+        arguments=[],
+        run_name="deploy:infra:prod",
+    )
+    assert cmd.run_name == "deploy:infra:prod"
