@@ -173,7 +173,6 @@ def _merge_trees(
 def introspect_mise_tasks(
     tasks: list[dict],
     delimiter: str = ":",
-    cwd: Path | None = None,
 ) -> dict[str, CommandSchema]:
     if not tasks:
         return {}
