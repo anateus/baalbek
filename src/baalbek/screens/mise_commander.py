@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import shlex
 
+from textual.binding import Binding
+
 from baalbek.schemas import CommandSchema
 from baalbek.screens.commander import CommanderScreen
+from baalbek.screens.delimiter_modal import DelimiterModal
 from baalbek.widgets.miller import MillerColumns
 from baalbek.widgets.parameter_list import ParameterList
 from baalbek.widgets.run_panel import RunPanel
@@ -19,6 +22,10 @@ def _split_generic_args(value: str) -> list[str]:
 
 
 class MiseCommanderScreen(CommanderScreen):
+    BINDINGS = CommanderScreen.BINDINGS + [
+        Binding("ctrl+t", "change_delimiter", "Delimiter", show=True),
+    ]
+
     def __init__(
         self,
         commands: dict[str, CommandSchema],
@@ -81,3 +88,23 @@ class MiseCommanderScreen(CommanderScreen):
                 args.extend(_split_generic_args(str(val)))
             else:
                 args.append(str(val))
+
+    def action_change_delimiter(self) -> None:
+        self.app.push_screen(
+            DelimiterModal(current=self._delimiter),
+            callback=self._on_delimiter_changed,
+        )
+
+    def _on_delimiter_changed(self, new_delimiter: str | None) -> None:
+        if new_delimiter is None or new_delimiter == self._delimiter:
+            return
+        self._delimiter = new_delimiter
+        from baalbek.mise_introspect import introspect_mise_tasks
+
+        new_commands = introspect_mise_tasks(
+            self._raw_tasks, delimiter=self._delimiter
+        )
+        mc = self.query_one(MillerColumns)
+        mc.remove()
+        new_mc = MillerColumns(new_commands, id="miller")
+        self.mount(new_mc, after=self.query_one("#breadcrumbs"))
