@@ -1,6 +1,6 @@
 [project]
 name = "baalbek"
-version = "0.2.19"
+version = "0.3.0"
 description = "Miller column TUI explorer for Click CLI apps"
 readme = "README.md"
 authors = [
@@ -14,6 +14,9 @@ dependencies = [
     "pyte>=0.8.2",
     "textual>=8.0.2",
 ]
+
+[project.scripts]
+baalbek-mise = "baalbek.mise_app:main"
 
 [project.urls]
 Repository = "https://github.com/anateus/baalbek"
