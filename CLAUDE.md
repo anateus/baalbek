@@ -1,6 +1,6 @@
 # Baalbek
 
-Miller column TUI explorer for Click CLI apps, built with Textual. Named after the ruins with impressive columns.
+Miller column TUI explorer for Click CLI apps and mise tasks, built with Textual. Named after the ruins with impressive columns.
 
 ## Quick Reference
 
@@ -28,8 +28,12 @@ src/baalbek/
 ├── modes.py            # NORMAL / EDIT mode enum
 ├── db.py               # SQLite history (~/.local/share/baalbek/history.db)
 ├── baalbek.tcss        # Textual CSS
+├── mise_app.py         # MiseBaalbek app, baalbek-mise CLI entry point
+├── mise_introspect.py  # Parses mise tasks JSON → CommandSchema tree
 ├── screens/
 │   ├── commander.py    # Main screen, keybindings, orchestration
+│   ├── mise_commander.py # Mise-specific screen: mise run execution, delimiter change
+│   ├── delimiter_modal.py # Modal for changing task name delimiter
 │   └── output_zoom.py  # Fullscreen output viewer
 └── widgets/
     ├── miller.py       # Core: committed columns + derived preview columns
@@ -47,6 +51,7 @@ src/baalbek/
 - **NORMAL/EDIT modes** — j/k moves `.field-highlight` CSS class without Textual focus. `i` enters EDIT (focuses widget), `Escape` exits.
 - **Execution** — `pty.fork()` with real-time stdout mirroring. Prepends `sys.argv[0]` to args. Falls back to capture-only when no terminal.
 - **App name** — picks longer of `cli.name` vs `pyproject.toml [project.name]`, appends description.
+- **Mise integration** — `mise_introspect.py` runs `mise tasks --all -x -J`, splits task names by delimiter (default `:`) into a hierarchy, and groups by source directory when tasks come from multiple dirs. `MiseCommanderScreen` overrides `build_command_args()` to produce `mise run <task>` commands. The `usage` CLI parses task usage specs into flags/arguments.
 
 ## Code Style
 

@@ -1,7 +1,7 @@
 [project]
 name = "baalbek"
 version = "0.3.0"
-description = "Miller column TUI explorer for Click CLI apps"
+description = "Miller column TUI explorer for Click CLI apps and mise tasks"
 readme = "README.md"
 authors = [
     { name = "Michael Katsevman", email = "michael@opennotes.ai" }
