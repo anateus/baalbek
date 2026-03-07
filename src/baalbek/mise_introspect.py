@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import json
 import subprocess
-from pathlib import Path
 
-from baalbek.schemas import ArgumentSchema, CommandSchema, OptionSchema
+from baalbek.schemas import ArgumentSchema, OptionSchema
 
 
 def _default_arguments() -> list[ArgumentSchema]:
