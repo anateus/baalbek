@@ -56,3 +56,94 @@ class TestParseUsageSpec:
         assert options == []
         assert len(arguments) == 1
         assert arguments[0].name == "arguments"
+
+
+class TestSplitTasksByDelimiter:
+    def _make_task(self, name, description="", usage="", source="/project/mise.toml"):
+        return {
+            "name": name,
+            "description": description,
+            "usage": usage,
+            "source": source,
+        }
+
+    def test_single_task_no_delimiter(self):
+        from baalbek.mise_introspect import _split_tasks_by_delimiter
+
+        tasks = [self._make_task("build", "Build project")]
+        tree = _split_tasks_by_delimiter(tasks, ":")
+        assert "build" in tree
+        assert tree["build"].name == "build"
+        assert tree["build"].docstring == "Build project"
+        assert tree["build"].is_group is False
+        assert tree["build"].run_name == "build"
+
+    def test_nested_task_creates_groups(self):
+        from baalbek.mise_introspect import _split_tasks_by_delimiter
+
+        tasks = [self._make_task("apply:infra:prod", "Deploy to prod")]
+        tree = _split_tasks_by_delimiter(tasks, ":")
+        assert "apply" in tree
+        assert tree["apply"].is_group is True
+        assert tree["apply"].run_name is None
+        assert "infra" in tree["apply"].subcommands
+        assert tree["apply"].subcommands["infra"].is_group is True
+        prod = tree["apply"].subcommands["infra"].subcommands["prod"]
+        assert prod.name == "prod"
+        assert prod.run_name == "apply:infra:prod"
+        assert prod.is_group is False
+
+    def test_sibling_tasks_share_group(self):
+        from baalbek.mise_introspect import _split_tasks_by_delimiter
+
+        tasks = [
+            self._make_task("deploy:server"),
+            self._make_task("deploy:client"),
+        ]
+        tree = _split_tasks_by_delimiter(tasks, ":")
+        assert "deploy" in tree
+        assert tree["deploy"].is_group is True
+        assert "server" in tree["deploy"].subcommands
+        assert "client" in tree["deploy"].subcommands
+
+    def test_parent_links_set(self):
+        from baalbek.mise_introspect import _split_tasks_by_delimiter
+
+        tasks = [self._make_task("a:b:c")]
+        tree = _split_tasks_by_delimiter(tasks, ":")
+        c = tree["a"].subcommands["b"].subcommands["c"]
+        assert c.parent is not None
+        assert c.parent.name == "b"
+        assert c.parent.parent is not None
+        assert c.parent.parent.name == "a"
+
+    def test_task_without_usage_gets_default_arguments(self):
+        from baalbek.mise_introspect import _split_tasks_by_delimiter
+
+        tasks = [self._make_task("test")]
+        tree = _split_tasks_by_delimiter(tasks, ":")
+        assert len(tree["test"].arguments) == 1
+        assert tree["test"].arguments[0].name == "arguments"
+
+    def test_custom_delimiter(self):
+        from baalbek.mise_introspect import _split_tasks_by_delimiter
+
+        tasks = [self._make_task("deploy/server/prod")]
+        tree = _split_tasks_by_delimiter(tasks, "/")
+        assert "deploy" in tree
+        assert "server" in tree["deploy"].subcommands
+        assert "prod" in tree["deploy"].subcommands["server"].subcommands
+        assert tree["deploy"].subcommands["server"].subcommands["prod"].run_name == "deploy/server/prod"
+
+    def test_task_name_conflicts_with_group_prefix(self):
+        from baalbek.mise_introspect import _split_tasks_by_delimiter
+
+        tasks = [
+            self._make_task("deploy", "Direct deploy"),
+            self._make_task("deploy:server", "Deploy server"),
+        ]
+        tree = _split_tasks_by_delimiter(tasks, ":")
+        assert tree["deploy"].is_group is True
+        assert "server" in tree["deploy"].subcommands
+        assert tree["deploy"].run_name == "deploy"
+        assert tree["deploy"].docstring == "Direct deploy"

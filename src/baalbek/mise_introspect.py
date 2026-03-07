@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 
-from baalbek.schemas import ArgumentSchema, OptionSchema
+from baalbek.schemas import ArgumentSchema, CommandSchema, OptionSchema
 
 
 def _default_arguments() -> list[ArgumentSchema]:
@@ -88,3 +88,69 @@ def parse_usage_spec(
         )
 
     return options, arguments
+
+
+def _parse_task_params(
+    task: dict,
+) -> tuple[list[OptionSchema], list[ArgumentSchema]]:
+    usage_spec = task.get("usage", "").strip()
+    if usage_spec:
+        return parse_usage_spec(usage_spec)
+    return [], _default_arguments()
+
+
+def _set_parents(
+    commands: dict[str, CommandSchema],
+    parent: CommandSchema | None = None,
+) -> None:
+    for schema in commands.values():
+        schema.parent = parent
+        if schema.subcommands:
+            _set_parents(schema.subcommands, schema)
+
+
+def _split_tasks_by_delimiter(
+    tasks: list[dict],
+    delimiter: str,
+) -> dict[str, CommandSchema]:
+    root: dict[str, CommandSchema] = {}
+
+    for task in tasks:
+        parts = task["name"].split(delimiter) if delimiter else [task["name"]]
+        current = root
+
+        for part in parts[:-1]:
+            if part not in current:
+                current[part] = CommandSchema(
+                    name=part,
+                    docstring=None,
+                    options=[],
+                    arguments=[],
+                    subcommands={},
+                    is_group=True,
+                )
+            elif not current[part].is_group:
+                current[part].is_group = True
+                if not current[part].subcommands:
+                    current[part].subcommands = {}
+            current = current[part].subcommands
+
+        leaf_name = parts[-1]
+        options, arguments = _parse_task_params(task)
+
+        if leaf_name in current and current[leaf_name].is_group:
+            current[leaf_name].docstring = task.get("description") or current[leaf_name].docstring
+            current[leaf_name].options = options
+            current[leaf_name].arguments = arguments
+            current[leaf_name].run_name = task["name"]
+        else:
+            current[leaf_name] = CommandSchema(
+                name=leaf_name,
+                docstring=task.get("description") or None,
+                options=options,
+                arguments=arguments,
+                run_name=task["name"],
+            )
+
+    _set_parents(root)
+    return root
