@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import click
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
 from textual.widgets import Footer, Static
 
-from baalbek.introspect import introspect_click_app
+from baalbek.schemas import CommandSchema
 from baalbek.screens.quit_confirm import QuitConfirmScreen
 from baalbek.widgets.breadcrumbs import Breadcrumbs
 from baalbek.widgets.miller import MillerColumns
@@ -29,12 +28,11 @@ class CommanderScreen(Screen):
         Binding("slash", "search", "/ Search", show=True),
     ]
 
-    def __init__(self, cli: click.BaseCommand, app_name: str | None = None, app_description: str | None = None, **kwargs) -> None:
+    def __init__(self, commands: dict[str, CommandSchema], app_name: str | None = None, app_description: str | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
-        self._cli = cli
-        self._app_name = app_name or cli.name or "CLI"
+        self._app_name = app_name or "CLI"
         self._app_description = app_description
-        self._commands = introspect_click_app(cli, exclude_names={"tui"})
+        self._commands = commands
         self._search_active: bool = False
         self._search_query: str = ""
 

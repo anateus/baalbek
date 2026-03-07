@@ -4,6 +4,7 @@ import click
 import pytest
 from textual.app import App
 
+from baalbek.introspect import introspect_click_app
 from baalbek.screens.commander import CommanderScreen
 from baalbek.widgets.miller import MillerColumns
 from baalbek.widgets.search_bar import SearchBar
@@ -38,7 +39,8 @@ def status():
 
 class FuzzyApp(App):
     def on_mount(self) -> None:
-        self.push_screen(CommanderScreen(sample_cli))
+        commands = introspect_click_app(sample_cli, exclude_names={"tui"})
+        self.push_screen(CommanderScreen(commands))
 
 
 @pytest.mark.asyncio

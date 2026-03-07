@@ -42,7 +42,10 @@ class Baalbek(App):
         self._db_path = db_path or _DEFAULT_DB_PATH
 
     def on_mount(self) -> None:
-        self.push_screen(CommanderScreen(self._cli, app_name=self._app_name, app_description=self._app_description))
+        from baalbek.introspect import introspect_click_app
+
+        commands = introspect_click_app(self._cli, exclude_names={"tui"})
+        self.push_screen(CommanderScreen(commands, app_name=self._app_name, app_description=self._app_description))
 
 
 def tui(
