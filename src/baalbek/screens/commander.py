@@ -184,8 +184,16 @@ class CommanderScreen(Screen):
                 db.close()
 
         with self.app.suspend():
+            from datetime import datetime
+
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[{now}] $ {command_str}\n")
             _execute()
-            input("\nPress Enter to continue...")
+            done = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"\n[{done}] Done.")
+            prompt = "Press Enter to continue..."
+            input(prompt)
+            print(f"\033[A\033[2K", end="", flush=True)
 
         mc = self.query_one(MillerColumns)
         db = HistoryDB(self.app._db_path)
