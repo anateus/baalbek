@@ -68,6 +68,13 @@ RunPanel ParameterList {
     color: $text-muted;
 }
 
+#command-help {
+    width: 1fr;
+    color: $text-muted;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
 #run-hint {
     width: 1fr;
     height: 1;

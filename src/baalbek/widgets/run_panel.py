@@ -16,17 +16,21 @@ class RunPanel(Vertical):
     def __init__(self, schema: CommandSchema, **kwargs) -> None:
         super().__init__(**kwargs)
         self._schema = schema
-        self._button_highlighted = False
         self._button_disabled = self._has_unfilled_required()
+        self._button_highlighted = not self._button_disabled
 
     def compose(self) -> ComposeResult:
         btn = Static("▶ Run command", id="run-button")
         if self._button_disabled:
             btn.add_class("disabled")
+        if self._button_highlighted:
+            btn.add_class("highlighted")
         yield btn
         hint = Static("", id="run-hint")
         hint.display = False
         yield hint
+        if self._schema.docstring:
+            yield Static(self._schema.docstring, id="command-help")
         pl = ParameterList(self._schema)
         if self.has_class("preview"):
             pl.add_class("preview")
@@ -92,6 +96,10 @@ class RunPanel(Vertical):
         else:
             self.parameter_list.open_edit_for_highlighted()
 
+    def on_mount(self) -> None:
+        if self._button_highlighted and not self.has_class("preview"):
+            self.parameter_list.highlighted = None
+
     def _update_button_state(self) -> None:
         btn = self.query_one("#run-button", Static)
         values = self.parameter_list.get_values()
@@ -102,11 +110,16 @@ class RunPanel(Vertical):
                 if not val or val == "":
                     has_unfilled = True
                     break
+        was_disabled = self._button_disabled
         self._button_disabled = has_unfilled
         if has_unfilled:
             btn.add_class("disabled")
         else:
             btn.remove_class("disabled")
+            if was_disabled:
+                self._button_highlighted = True
+                self._update_button_visual()
+                self.parameter_list.highlighted = None
 
     def show_last_run_failed(self) -> None:
         hint = self.query_one("#run-hint", Static)
